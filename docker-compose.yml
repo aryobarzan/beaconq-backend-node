@@ -1,0 +1,122 @@
+services:
+  app:
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=2048
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo1
+    restart: unless-stopped
+    volumes:
+      - ./log:/app/log
+  # Rely on this separate service due to Windows permissions not translating correctly to the linux context of docker.
+  # Here, this initial service will set the appropriate permissions on the keyfile that the mongo nodes will depend on.
+  # Note: a keyfile has been generated and set up to enable secure internal communication between the nodes themselves.
+  # This is required when the replica set is built with authentication enabled, which is the case here (username & password),
+  # though keyfile is also recommended for production.
+  # To create keyfile: `openssl rand -base64 756 > mongo-keyfile`
+  keyfile-init:
+    image: alpine:latest
+    command: >
+      sh -c "cp /tmp/mongo-keyfile /keyfile/mongo-keyfile &&
+             chown 999:999 /keyfile/mongo-keyfile &&
+             chmod 400 /keyfile/mongo-keyfile"
+    volumes:
+      - ./mongo-keyfile:/tmp/mongo-keyfile:ro
+      - mongo-keyfile-volume:/keyfile
+  # Adapted from: https://medium.com/workleap/the-only-local-mongodb-replica-set-with-docker-compose-guide-youll-ever-need-2f0b74dd8384
+  mongo1: # Primary node
+    image: mongo:8.2.1
+    command:
+      [
+        "--replSet",
+        "rs0",
+        "--bind_ip_all",
+        "--port",
+        "27017",
+        "--keyFile",
+        "/keyfile/mongo-keyfile",
+        "--quiet",
+      ]
+    ports:
+      - 27017:27017
+    depends_on:
+      - keyfile-init
+    environment:
+      # A user with these credentials will automatically be created in the 'admin' database.
+      # As such, attempting to manually create that user as part of the mongo-init.js script would lead to an error and start-up issues for mongo.
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    healthcheck:
+      # Reduced frequency to avoid frequent auth/connect chattiness in the server logs.
+      # The healthcheck still verifies replica set initialization and authentication,
+      # but runs less often to reduce ACCESS/NETWORK logging from repeated short-lived
+      # connections.
+      test: >
+        sh -c "echo \"try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo1:27017',priority:1},{_id:1,host:'mongo2:27018',priority:0.5},{_id:2,host:'mongo3:27019',priority:0.5}]}) }\" | mongosh --host mongo1 --port 27017 -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase admin"
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 10
+    volumes:
+      - mongo1-data:/data/db
+      - mongo1-config:/data/configdb
+      - mongo-keyfile-volume:/keyfile
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+
+  mongo2:
+    image: mongo:8.2.1
+    command:
+      [
+        "--replSet",
+        "rs0",
+        "--bind_ip_all",
+        "--port",
+        "27018",
+        "--keyFile",
+        "/keyfile/mongo-keyfile",
+        "--quiet",
+      ]
+    ports:
+      - 27018:27018
+    depends_on:
+      - keyfile-init
+    volumes:
+      - mongo2-data:/data/db
+      - mongo2-config:/data/configdb
+      - mongo-keyfile-volume:/keyfile
+
+  mongo3:
+    image: mongo:lat8.2.1est
+    command:
+      [
+        "--replSet",
+        "rs0",
+        "--bind_ip_all",
+        "--port",
+        "27019",
+        "--keyFile",
+        "/keyfile/mongo-keyfile",
+        "--quiet",
+      ]
+    ports:
+      - 27019:27019
+    depends_on:
+      - keyfile-init
+    volumes:
+      - mongo3-data:/data/db
+      - mongo3-config:/data/configdb
+      - mongo-keyfile-volume:/keyfile
+
+volumes:
+  mongo1-data:
+  mongo2-data:
+  mongo3-data:
+  mongo1-config:
+  mongo2-config:
+  mongo3-config:
+  mongo-keyfile-volume:

@@ -1,0 +1,9 @@
+
+// You can choose whatever DATABASE_NAME you'd like.
+
+db = db.getSiblingDB("DATABASE_NAME");
+db.createUser({
+  user: "my_username",
+  pwd: "strong_password",
+  roles: [{ role: "readWrite", db: "DATABASE_NAME" }],
+});
