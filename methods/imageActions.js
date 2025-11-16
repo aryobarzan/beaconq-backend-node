@@ -276,7 +276,7 @@ const getGalleryImageIdentifiers = async (req, res) => {
     }
     return res.status(200).send(items);
   } catch (error) {
-    logger.error(err);
+    logger.error(error);
     return res.status(500).send({ message: "Failed to list gallery images." });
   }
 };

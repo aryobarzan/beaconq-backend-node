@@ -1,3 +1,5 @@
+/*global __dirname, a*/
+
 // server.js (improved bootstrap + graceful shutdown)
 const path = require("path");
 global.appRoot = path.resolve(__dirname);

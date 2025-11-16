@@ -1,5 +1,8 @@
 # BEACON Q - Backend (API server & database)
 
+[![License](https://img.shields.io/github/license/apuyou/store-badge)](https://github.com/aryobarzan/beaconq-backend-node/blob/main/LICENSE)
+[![CodeFactor](https://www.codefactor.io/repository/github/aryobarzan/beaconq-backend-node/badge/main)](https://www.codefactor.io/repository/github/aryobarzan/beaconq-backend-node/overview/main)
+
 Backend for the quiz platform "BEACON Q", based on Node.js and MongoDB.
 
 The project currently lacks extensive documentation, though this is slowly being amended.

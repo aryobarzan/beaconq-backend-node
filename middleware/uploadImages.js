@@ -98,44 +98,39 @@ async function _storeBufferToGridFS(bucketName, file, metadata = {}) {
 
 // promise-based handlers
 async function uploadFilesHandler(req, res) {
-  try {
-    await uploadFilesMiddleware(req, res);
-    // write each buffered file to GridFS and attach results to req.files
-    if (!req.files || req.files.length === 0) return;
+  // No try-catch: the caller shall handle the HTTP response
 
-    const results = [];
-    for (const f of req.files) {
-      const info = await _storeBufferToGridFS(DEFAULT_IMAGE_BUCKET, f, {});
-      results.push(info);
-    }
-    // Replace req.files with an array of stored file info
-    req.files = results;
-    return;
-  } catch (err) {
-    // rethrow so the caller handles the HTTP response
-    throw err;
+  await uploadFilesMiddleware(req, res);
+  // write each buffered file to GridFS and attach results to req.files
+  if (!req.files || req.files.length === 0) return;
+
+  const results = [];
+  for (const f of req.files) {
+    const info = await _storeBufferToGridFS(DEFAULT_IMAGE_BUCKET, f, {});
+    results.push(info);
   }
+  // Replace req.files with an array of stored file info
+  req.files = results;
+  return;
 }
 
 async function uploadGalleryImageHandler(req, res) {
-  try {
-    await uploadGalleryImageMiddleware(req, res);
-    if (!req.file) return;
+  // No try-catch: the caller shall handle the HTTP response
 
-    const title = stripHtml(req.query && req.query.title);
-    const caption = stripHtml(req.query && req.query.caption);
+  await uploadGalleryImageMiddleware(req, res);
+  if (!req.file) return;
 
-    const metadata = {};
-    if (req && req.token && req.token._id) metadata.author = req.token._id;
-    if (title) metadata.title = title.slice(0, 200);
-    if (caption) metadata.caption = caption.slice(0, 1000);
+  const title = stripHtml(req.query && req.query.title);
+  const caption = stripHtml(req.query && req.query.caption);
 
-    const info = await _storeBufferToGridFS(GALLERY_BUCKET, req.file, metadata);
-    req.file = info;
-    return;
-  } catch (err) {
-    throw err;
-  }
+  const metadata = {};
+  if (req && req.token && req.token._id) metadata.author = req.token._id;
+  if (title) metadata.title = title.slice(0, 200);
+  if (caption) metadata.caption = caption.slice(0, 1000);
+
+  const info = await _storeBufferToGridFS(GALLERY_BUCKET, req.file, metadata);
+  req.file = info;
+  return;
 }
 
 module.exports.uploadFilesHandler = uploadFilesHandler;

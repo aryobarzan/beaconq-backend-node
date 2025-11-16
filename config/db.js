@@ -5,7 +5,7 @@ const logger = require("../middleware/logger");
 async function connectDB() {
   const maxAttempts = 10;
   let attempt = 0;
-  while (true) {
+  while (attempt < maxAttempts) {
     try {
       attempt++;
       const conn = await mongoose.connect(process.env.MONGO_URI, {});

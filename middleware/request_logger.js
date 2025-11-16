@@ -1,3 +1,4 @@
+const process = require("process");
 const pino = require("pino");
 const rfs = require("rotating-file-stream");
 const fs = require("fs");

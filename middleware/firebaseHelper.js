@@ -8,7 +8,9 @@ var mongoose = require("mongoose");
 async function shutdown() {
   try {
     await nodeSchedule.gracefulShutdown();
-  } catch (err) {}
+  } catch (err) {
+    // do nothing
+  }
 }
 
 async function setupNotifications() {
