@@ -1,6 +1,6 @@
 /*global __dirname, a*/
 
-// server.js (improved bootstrap + graceful shutdown)
+// server.js: server initialization, including database connection (MongoDB) and Firebase Admin
 const path = require("path");
 global.appRoot = path.resolve(__dirname);
 
@@ -22,7 +22,7 @@ const firebaseHelper = require("./middleware/firebaseHelper");
 // set timezone
 process.env.TZ = "Europe/Amsterdam";
 
-// Validate main set of required environment variables
+// main set of required environment variables
 function validateEnv() {
   const required = [
     "NODE_ENV",
@@ -42,6 +42,7 @@ let server;
 let firebaseApp;
 let isShuttingDown = false;
 
+// Firebase Cloud Messaging (via firebase-admin sdk): Used for push notification scheduling (scheduled quizzes)
 async function initFirebase() {
   const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (!credPath) {
