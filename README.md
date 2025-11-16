@@ -3,9 +3,7 @@
 [![License](https://img.shields.io/github/license/apuyou/store-badge)](https://github.com/aryobarzan/beaconq-backend-node/blob/main/LICENSE)
 [![CodeFactor](https://www.codefactor.io/repository/github/aryobarzan/beaconq-backend-node/badge/main)](https://www.codefactor.io/repository/github/aryobarzan/beaconq-backend-node/overview/main)
 
-Backend for the quiz platform "BEACON Q", based on Node.js and MongoDB.
-
-The project currently lacks extensive documentation, though this is slowly being amended.
+Backend for the quiz platform "BEACON Q" ([Play Store](https://play.google.com/store/apps/details?id=lu.uni.coast.beacon_q_app), [App Store](https://apps.apple.com/us/app/beacon-q/id1643852992)), based on Node.js and MongoDB.
 
 ## Docker
 
@@ -82,4 +80,9 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 
 ---
 
-Licensed under the Apache License 2.0 — see the `LICENSE` file.
+## Publications
+
+> - [BEACON Q: Encouraging Regular Self-Testing via a Personalized and Gamified Quiz App](https://orbilu.uni.lu/handle/10993/65895)
+> - [High-Fidelity Simulation Pre-Briefing with Digital Quizzes: Using INACSL Standards for Improving Effectiveness](https://orbilu.uni.lu/handle/10993/61375)
+> - [Difficulty-Adjusted Quizzes: An Effectiveness Analysis](https://ieeexplore.ieee.org/abstract/document/10398305)
+> - [Improving Long-Term Retention through Personalized Recall Testing and Immediate Feedback](https://ieeexplore.ieee.org/abstract/document/10111487)
