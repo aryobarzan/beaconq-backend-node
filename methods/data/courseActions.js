@@ -192,7 +192,7 @@ var functions = {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
                 resourceType: "COURSE",
-                user: mongoose.Types.ObjectId(req.token._id),
+                user: new mongoose.Types.ObjectId(String(req.token._id)),
                 level: { $gte: 4 },
               },
             },
@@ -382,7 +382,7 @@ var functions = {
         message: "Course deregistration failed: course id is invalid.",
       });
     }
-    const courseId = mongoose.Types.ObjectId(req.body.courseId);
+    const courseId = new mongoose.Types.ObjectId(String(req.body.courseId));
     try {
       const updatedCourseRegistration =
         await CourseRegistration.findOneAndUpdate(
@@ -409,7 +409,7 @@ var functions = {
     }
   },
   getRegisteredCoursesForUser: async function (req, res) {
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
 
     try {
       // we lookup only the user's active CourseRegistrations and then keep only Courses
@@ -507,7 +507,7 @@ var functions = {
     }
     try {
       const course = await Course.findById(
-        mongoose.Types.ObjectId(req.params.courseId),
+        new mongoose.Types.ObjectId(String(req.params.courseId)),
       ).exec();
       if (!course) {
         return res.status(GetRegisteredUsersStatus.None).send({

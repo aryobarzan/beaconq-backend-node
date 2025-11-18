@@ -14,8 +14,8 @@ var functions = {
   checkScheduledQuizSurveyUserStatus: async function (userId, scheduledQuiz) {
     try {
       const surveyAnswer = await SurveyAnswer.findOne({
-        scheduledQuiz: mongoose.Types.ObjectId(scheduledQuiz._id),
-        user: mongoose.Types.ObjectId(userId),
+        scheduledQuiz: new mongoose.Types.ObjectId(String(scheduledQuiz._id)),
+        user: new mongoose.Types.ObjectId(String(userId)),
       }).exec();
       // User has answered survey
       if (surveyAnswer) {
@@ -93,8 +93,10 @@ var functions = {
             isFirstPostQuiz = false;
             const userAnswers = await ActivityUserAnswer.base
               .find({
-                scheduledQuiz: mongoose.Types.ObjectId(otherScheduledQuiz._id),
-                user: mongoose.Types.ObjectId(userId),
+                scheduledQuiz: new mongoose.Types.ObjectId(
+                  String(otherScheduledQuiz._id),
+                ),
+                user: new mongoose.Types.ObjectId(String(userId)),
               })
               .lean()
               .exec();

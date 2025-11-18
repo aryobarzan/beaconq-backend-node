@@ -14,7 +14,7 @@ module.exports = async (req, res, next) => {
     const decodedToken = jwt.verify(token, process.env.PUBLIC_KEY);
     // Do not transmit hashed password to client
     delete decodedToken["password"];
-    const userId = mongoose.Types.ObjectId(decodedToken._id);
+    const userId = new mongoose.Types.ObjectId(String(decodedToken._id));
     const user = await User.findById(userId).select("username").lean();
     if (!user) {
       logger.warn(

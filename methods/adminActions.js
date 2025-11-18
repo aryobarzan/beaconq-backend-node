@@ -83,7 +83,7 @@ var functions = {
         message: "Password change failed: invalid user. (ERR1)",
       });
     }
-    const userId = mongoose.Types.ObjectId(req.body.userId);
+    const userId = new mongoose.Types.ObjectId(String(req.body.userId));
 
     const newPassword = String(req.body.newPassword);
     const allowedPatternRegex = /^[0-9A-Za-z_?!+\-]+$/;

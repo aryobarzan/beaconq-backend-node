@@ -72,8 +72,8 @@ function getCourseScheduledQuizzes(courseIds, res) {
         $match: {
           _id: {
             $in: Array.isArray(courseIds)
-              ? courseIds.map((c) => mongoose.Types.ObjectId(c))
-              : [mongoose.Types.ObjectId(courseIds)],
+              ? courseIds.map((c) => new mongoose.Types.ObjectId(String(c)))
+              : [new mongoose.Types.ObjectId(String(courseIds))],
           },
         },
       },
@@ -109,7 +109,9 @@ function getCourseQuizzes(courseIds, res) {
     [
       {
         $match: {
-          _id: { $in: courseIds.map((c) => mongoose.Types.ObjectId(c)) },
+          _id: {
+            $in: courseIds.map((c) => new mongoose.Types.ObjectId(String(c))),
+          },
         },
       },
       { $unwind: "$sessions" },
@@ -141,7 +143,7 @@ async function findScheduledQuiz(scheduledQuizId) {
     );
     return null;
   }
-  const id = mongoose.Types.ObjectId(scheduledQuizId);
+  const id = new mongoose.Types.ObjectId(String(scheduledQuizId));
   // Note that scheduled quizzes are subdocuments of CourseSessions which are also subdocuments of Courses,
   // hence the parent Course needs to be found.
   try {
@@ -196,7 +198,9 @@ async function findQuiz(quizId) {
 async function findCourseFromScheduledQuiz(scheduledQuizId, populate) {
   if (populate) {
     return Course.findOne({
-      "sessions.scheduledQuizzes._id": mongoose.Types.ObjectId(scheduledQuizId),
+      "sessions.scheduledQuizzes._id": new mongoose.Types.ObjectId(
+        String(scheduledQuizId),
+      ),
     })
       .exec()
       .then((course) => {
@@ -205,7 +209,9 @@ async function findCourseFromScheduledQuiz(scheduledQuizId, populate) {
       });
   } else {
     return Course.findOne({
-      "sessions.scheduledQuizzes._id": mongoose.Types.ObjectId(scheduledQuizId),
+      "sessions.scheduledQuizzes._id": new mongoose.Types.ObjectId(
+        String(scheduledQuizId),
+      ),
     }).exec();
   }
 }
@@ -215,8 +221,9 @@ async function findCourseAndSession(scheduledQuizId) {
     // Match by the given scheduled quiz id
     {
       $match: {
-        "sessions.scheduledQuizzes._id":
-          mongoose.Types.ObjectId(scheduledQuizId),
+        "sessions.scheduledQuizzes._id": new mongoose.Types.ObjectId(
+          String(scheduledQuizId),
+        ),
       },
     },
     // Unwind the sessions array of the found Course
@@ -224,8 +231,9 @@ async function findCourseAndSession(scheduledQuizId) {
     // Match only the session which contains the found scheduled quiz
     {
       $match: {
-        "sessions.scheduledQuizzes._id":
-          mongoose.Types.ObjectId(scheduledQuizId),
+        "sessions.scheduledQuizzes._id": new mongoose.Types.ObjectId(
+          String(scheduledQuizId),
+        ),
       },
     },
   ]);
@@ -244,7 +252,7 @@ async function findCourseAndSession(scheduledQuizId) {
 /// Properties are not populated, such as topics list.
 async function retrieveCourseSession(courseSessionId) {
   return Course.findOne({
-    "sessions._id": mongoose.Types.ObjectId(courseSessionId),
+    "sessions._id": new mongoose.Types.ObjectId(String(courseSessionId)),
   })
     .exec()
     .then((course) => {
@@ -308,7 +316,7 @@ function retrieveScheduledQuizFromPopulatedSession(session, scheduledQuizId) {
 async function getUserRegisteredCourses(userId, asCourseObjects) {
   // return Course.find().exec();
   return CourseRegistration.find({
-    user: mongoose.Types.ObjectId(userId),
+    user: new mongoose.Types.ObjectId(String(userId)),
     isActive: { $eq: true },
   })
     .exec()
@@ -318,8 +326,9 @@ async function getUserRegisteredCourses(userId, asCourseObjects) {
       } else {
         return Course.find({
           _id: {
-            $in: result.map((courseRegistration) =>
-              mongoose.Types.ObjectId(courseRegistration.course),
+            $in: result.map(
+              (courseRegistration) =>
+                new mongoose.Types.ObjectId(String(courseRegistration.course)),
             ),
           },
         })
@@ -349,7 +358,7 @@ async function getUserRegisteredCourses(userId, asCourseObjects) {
   //   {
   //     $match: {
   //       "course_registrations.user": {
-  //         $eq: mongoose.Types.ObjectId(userId),
+  //         $eq: new mongoose.Types.ObjectId(String(userId)),
   //       },
   //       "course_registrations.isActive": { $eq: true },
   //     },

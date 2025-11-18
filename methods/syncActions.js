@@ -37,7 +37,7 @@ var functions = {
     }
 
     try {
-      const userId = mongoose.Types.ObjectId(req.token._id);
+      const userId = new mongoose.Types.ObjectId(String(req.token._id));
       const fsrsModelsJSON = JSON.parse(req.body.fsrsModels);
       const fsrsModels = [];
 
@@ -54,8 +54,8 @@ var functions = {
       let dataIds = [];
       if (req.body.dataIds && req.body.dataIds.length > 0) {
         try {
-          dataIds = JSON.parse(req.body.dataIds).map((id) =>
-            mongoose.Types.ObjectId(id),
+          dataIds = JSON.parse(req.body.dataIds).map(
+            (id) => new mongoose.Types.ObjectId(String(id)),
           );
         } catch (err) {
           logger.error(
@@ -168,7 +168,7 @@ var functions = {
         .send({ message: "Ebisu model sync failed: missing argument." });
       return;
     }
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
     const ebisuModelsJSON = JSON.parse(req.body.ebisuModels);
     var ebisuModels = [];
     for (let i in ebisuModelsJSON) {
@@ -313,7 +313,7 @@ var functions = {
             "Activity user answer logging check failed: missing argument.",
         });
     }
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
     const activityUserAnswerTimestamps = JSON.parse(
       req.body.activityUserAnswerTimestamps,
     ).map((elem) => DateTime.fromISO(elem));
@@ -374,12 +374,12 @@ var functions = {
         message: "Activity user answers sync failed: missing argument.",
       });
     }
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
     const activityIdsJSON = JSON.parse(req.body.activityIds);
     let activityIds = [];
     for (let activityID of activityIdsJSON) {
       try {
-        activityIds.push(mongoose.Types.ObjectId(activityID));
+        activityIds.push(new mongoose.Types.ObjectId(String(activityID)));
       } catch (err) {
         logger.error(err);
       }

@@ -153,7 +153,7 @@ var functions = {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
                 resourceType: "QUIZ",
-                user: mongoose.Types.ObjectId(req.token._id),
+                user: new mongoose.Types.ObjectId(String(req.token._id)),
                 level: { $gte: 4 },
               },
             },

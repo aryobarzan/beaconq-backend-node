@@ -16,7 +16,7 @@ var functions = {
       });
       return;
     }
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
     /// IMPORTANT - remember to use JSON.parse, as req.body.fsrsModels on its own is a string rather than an array.
     /// Alternative: look into body-parser package's "extended=true" option.
     const fsrsModelsJSON = JSON.parse(req.body.fsrsModels);
@@ -38,7 +38,9 @@ var functions = {
           //       { user: userId },
           //     ],
           //   });
-          dataIdsToSearch.push(mongoose.Types.ObjectId(fsrsModel.dataId));
+          dataIdsToSearch.push(
+            new mongoose.Types.ObjectId(String(fsrsModel.dataId)),
+          );
         }
       } catch (err) {
         logger.error(err);

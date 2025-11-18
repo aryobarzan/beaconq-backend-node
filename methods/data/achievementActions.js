@@ -80,7 +80,7 @@ var functions = {
         decodeFailures.push({ index: i, item: achievementsRaw[i] });
         continue;
       }
-      decoded.author = mongoose.Types.ObjectId(req.token._id);
+      decoded.author = new mongoose.Types.ObjectId(String(req.token._id));
 
       operations.push({ insertOne: { document: decoded } });
     }
@@ -155,7 +155,11 @@ var functions = {
   },
   getAchievements: async function (req, res) {
     let courseIds = [];
-    if (req.body.courseIds) {
+    // Important to check for req.body, as otherwise req.body.courseIds will throw an
+    // undefined error in case the cient sends an empty array.
+    // TODO: investigate as to why this is the case, as the client app always explicitly includes the field,
+    // even for an empty array.
+    if (req.body && req.body.courseIds) {
       try {
         courseIds = JSON.parse(req.body.courseIds);
         if (!Array.isArray(courseIds)) {
@@ -175,7 +179,7 @@ var functions = {
           if (!mongoose.isValidObjectId(id)) {
             return null;
           }
-          return mongoose.Types.ObjectId(id);
+          return new mongoose.Types.ObjectId(String(id));
         })
         .filter(Boolean);
     }
@@ -249,7 +253,7 @@ var functions = {
           if (!mongoose.isValidObjectId(id)) {
             return null;
           }
-          return mongoose.Types.ObjectId(id);
+          return new mongoose.Types.ObjectId(String(id));
         })
         .filter(Boolean);
 
@@ -379,8 +383,8 @@ var functions = {
         .map((elem) => String(elem._id))
         .filter((id) => !insertedIds.includes(id));
 
-      const allIds = [...insertedIds, ...modifiedIds].map((id) =>
-        mongoose.Types.ObjectId(id),
+      const allIds = [...insertedIds, ...modifiedIds].map(
+        (id) => new mongoose.Types.ObjectId(String(id)),
       );
 
       if (allIds.length === 0) {

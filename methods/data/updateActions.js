@@ -70,7 +70,7 @@ var functions = {
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      courseObjectIds.push(mongoose.Types.ObjectId(id));
+      courseObjectIds.push(new mongoose.Types.ObjectId(String(id)));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 
@@ -154,7 +154,7 @@ var functions = {
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      quizObjectIds.push(mongoose.Types.ObjectId(id));
+      quizObjectIds.push(new mongoose.Types.ObjectId(String(id)));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 
@@ -234,7 +234,7 @@ var functions = {
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      activityObjectIds.push(mongoose.Types.ObjectId(id));
+      activityObjectIds.push(new mongoose.Types.ObjectId(String(id)));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 
@@ -313,7 +313,7 @@ var functions = {
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      topicObjectIds.push(mongoose.Types.ObjectId(id));
+      topicObjectIds.push(new mongoose.Types.ObjectId(String(id)));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 

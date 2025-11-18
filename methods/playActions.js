@@ -515,7 +515,7 @@ var functions = {
       });
     }
 
-    const rawCourseId = req.params.courseId;
+    const rawCourseId = String(req.params.courseId);
     if (!mongoose.isValidObjectId(rawCourseId)) {
       logger.error("Invalid courseId for trial quiz check", {
         courseId: rawCourseId,
@@ -525,7 +525,7 @@ var functions = {
       });
     }
 
-    const courseId = mongoose.Types.ObjectId(rawCourseId);
+    const courseId = new mongoose.Types.ObjectId(rawCourseId);
 
     try {
       // We just select (retain) the trialQuiz field which we need.

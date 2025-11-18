@@ -90,8 +90,8 @@ var functions = {
         message: "User Patron Profile update failed: parameter missing.",
       });
     }
-    const courseId = mongoose.Types.ObjectId(req.params.course);
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const courseId = new mongoose.Types.ObjectId(String(req.params.course));
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
 
     try {
       const userPatronProfile = await UserPatronProfileModel.findOne({
@@ -293,8 +293,8 @@ var functions = {
         message: "User Patron Profile retrieval failed: parameter missing.",
       });
     }
-    const courseId = mongoose.Types.ObjectId(req.params.course);
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const courseId = new mongoose.Types.ObjectId(String(req.params.course));
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
     try {
       const userPatronProfile = await UserPatronProfileModel.findOne({
         course: courseId,
@@ -323,11 +323,11 @@ var functions = {
    * Otherwise, the authenticated user's (based on passed token) UserPatronProfiles for all their courses are retrieved.
    */
   getUserPatronProfiles: async function (req, res) {
-    const userId = mongoose.Types.ObjectId(req.token._id);
+    const userId = new mongoose.Types.ObjectId(String(req.token._id));
     let courseId = null;
     if (req.params.course) {
       if (mongoose.isValidObjectId(req.params.course)) {
-        courseId = mongoose.Types.ObjectId(req.params.course);
+        courseId = new mongoose.Types.ObjectId(String(req.params.course));
       } else {
         return res.status(GetUserPatronProfilesStatus.MissingArguments).send({
           message:
@@ -367,7 +367,7 @@ var functions = {
         message: "Course Patron Profiles retrieval failed: parameter missing.",
       });
     }
-    const courseId = mongoose.Types.ObjectId(req.params.course);
+    const courseId = new mongoose.Types.ObjectId(String(req.params.course));
     try {
       const coursePatronProfiles = await CoursePatronProfileModel.find({
         course: courseId,

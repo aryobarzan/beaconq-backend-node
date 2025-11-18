@@ -174,7 +174,7 @@ var functions = {
         message: "Course announcements fetching failed: parameter missing.",
       });
     }
-    const courseId = mongoose.Types.ObjectId(req.params.courseId);
+    const courseId = new mongoose.Types.ObjectId(String(req.params.courseId));
     var searchConditions = [{ course: courseId }];
     if (req.query.recentOnly) {
       const currentDate = new Date();
@@ -207,7 +207,11 @@ var functions = {
     }
   },
   getCourseAnnouncementsForCourses: async function (req, res) {
-    if (!req.body.courseIds) {
+    // Important to check for !req.body, as otherwise !req.body.courseIds will throw an
+    // undefined error in case the cient sends an empty array.
+    // TODO: investigate as to why this is the case, as the client app always explicitly includes the field,
+    // even for an empty array.
+    if (!req.body || !req.body.courseIds) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message:
           "Course announcement fetching for course(s) failed: course IDs missing. [ERR924]",
@@ -231,7 +235,7 @@ var functions = {
 
     const validCourseObjectIds = courseIds
       .filter((id) => mongoose.isValidObjectId(id))
-      .map((id) => mongoose.Types.ObjectId(id));
+      .map((id) => new mongoose.Types.ObjectId(String(id)));
 
     if (validCourseObjectIds.length === 0) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({

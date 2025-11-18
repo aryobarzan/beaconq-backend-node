@@ -39,7 +39,7 @@ async function refreshCourseNotifications(courseId) {
   }
   try {
     const course = await Course.findById(
-      mongoose.Types.ObjectId(courseId),
+      new mongoose.Types.ObjectId(String(courseId)),
     ).exec();
     if (course) {
       scheduleJobsForCourseScheduledQuizzes(course);

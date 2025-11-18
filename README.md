@@ -80,6 +80,46 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 
 ---
 
+### Connecting to mongo containers from host machine
+
+Internally (docker), the node service can connect to the MongoDB replica set using their assigned container names (mongo1, mongo2, mongo3).  
+This is facilitated by Docker's own DNS service, which maps each container name to its corresponding IP address in the Docker network.
+
+Subsequently, the host machine does not know anything about these container names, as it cannot resolve the associated IP addresses for them.
+
+#### Approach #1: docker-compose
+
+Currently, the `docker-compose.yml` file has been set up in a way to enable mongo connections from the host machine using the host name "host.docker.internal":
+
+- For each mongo container (mongo1, mongo2, mongo3), we introduce the following key-value mapping under 'environment': `MONGODB_ADVERTISED_HOSTNAME: host.docker.internal`
+- For the primary node (mongo1), we update its `healthcheck` command to use this new hostname, as it crucially sets up our replica set! (previously, we were simply using the container names)
+
+With this setup, we can connect to our MongoDB replica set with the following connection string (using `mongosh` or MongoDB Compass): `mongodb://<user>:<password>@host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0&authSource=admin`
+
+- replace "user" and "password" with the admin credentials we have set up in our `.env` file. (`MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`)
+
+#### Approach #2: manually adjust hosts
+
+The manual approach would be to add the IP mappings to our host's DNS resolution setup:
+
+- Windows: edit the file `C:\Windows\System32\drivers\etc\hosts`
+  - open the file as admin, e.g., open Notepad as administrator
+- Linux/macOS: edit the file `/etc/hosts`
+  - use `sudo`
+- In the given `hosts` file, add a line for each container name, where we map them to the IP address on the host machine that can access our MongoDB server running in the Docker network. For example, in the case of "localhost", add the following entries:
+
+```
+127.0.0.1 mongo1
+127.0.0.1 mongo2
+127.0.0.1 mongo3
+```
+
+- Finally, to connect to our replica set, use the following connection string (using `mongosh` or MongoDB Compass): `mongodb://<user>:<password>@mongo1:27017,mongo2:27018,mongo3:27019/?replicaSet=rs0&authSource=admin`
+  - replace "user" and "password" with the admin credentials we have set up in our `.env` file. (`MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`)
+
+The solution is to manually override your host machine's DNS resolution by editing its local hosts file. This file acts as a local, static DNS record keeper.
+You are telling your host machine: "When anything tries to look up the name mongo1, use this specific IP address."
+
 ## Publications
 
 > - [BEACON Q: Encouraging Regular Self-Testing via a Personalized and Gamified Quiz App](https://orbilu.uni.lu/handle/10993/65895)

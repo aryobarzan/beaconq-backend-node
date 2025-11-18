@@ -51,7 +51,7 @@ var functions = {
     const scheduledQuizIds = [];
     for (const id of req.body.scheduledQuizIds) {
       try {
-        scheduledQuizIds.push(mongoose.Types.ObjectId(id));
+        scheduledQuizIds.push(new mongoose.Types.ObjectId(String(id)));
       } catch (_) {
         // We just skip invalid IDs
       }
@@ -171,7 +171,9 @@ var functions = {
 
     try {
       const surveyAnswers = await SurveyAnswer.find({
-        scheduledQuiz: mongoose.Types.ObjectId(req.params.scheduledQuizId),
+        scheduledQuiz: new mongoose.Types.ObjectId(
+          String(req.params.scheduledQuizId),
+        ),
       })
         .populate("user", "username role")
         .lean()
@@ -219,7 +221,7 @@ var functions = {
     }
     let courseId;
     try {
-      courseId = mongoose.Types.ObjectId(req.params.courseId);
+      courseId = new mongoose.Types.ObjectId(String(req.params.courseId));
     } catch (err) {
       logger.error(err);
       return res.status(GetTrialQuizAnswersStatus.MissingArguments).send({
@@ -276,7 +278,7 @@ var functions = {
     }
     let courseId;
     try {
-      courseId = mongoose.Types.ObjectId(req.params.courseId);
+      courseId = new mongoose.Types.ObjectId(String(req.params.courseId));
     } catch (err) {
       logger.error(err);
       res.status(GetActivityUserAnswersStatus.MissingArguments).send({

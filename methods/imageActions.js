@@ -60,7 +60,7 @@ const downloadImage = async (req, res) => {
       bucketName: process.env.DATABASE_IMAGE_BUCKET,
     });
     let downloadStream = bucket.openDownloadStream(
-      mongoose.Types.ObjectId(req.query.id),
+      new mongoose.Types.ObjectId(String(req.query.id)),
     );
     downloadStream.on("data", function (data) {
       return res.status(200).write(data);
@@ -92,7 +92,7 @@ const deleteImages = async (req, res) => {
     var imageIds = JSON.parse(req.body.images);
     for (let i = 0; i < imageIds.length; i++) {
       try {
-        await bucket.delete(mongoose.Types.ObjectId(imageIds[i]));
+        await bucket.delete(new mongoose.Types.ObjectId(String(imageIds[i])));
         deletedCount += 1;
       } catch (error) {
         logger.error(error);
@@ -175,7 +175,7 @@ const downloadGalleryImage = async (req, res) => {
       "gallery_images" + ".files",
     );
     const document = await galleryImagesCollection.findOne({
-      _id: mongoose.Types.ObjectId(req.params.imageId),
+      _id: new mongoose.Types.ObjectId(String(req.params.imageId)),
     });
     if (!document) {
       return res.status(500).send({
@@ -186,7 +186,7 @@ const downloadGalleryImage = async (req, res) => {
     res.set("caption", document.metadata.caption);
     res.set("id", req.params.imageId);
     let downloadStream = bucket.openDownloadStream(
-      mongoose.Types.ObjectId(req.params.imageId),
+      new mongoose.Types.ObjectId(String(req.params.imageId)),
     );
     downloadStream.on("data", function (data) {
       return res.status(200).write(data);
@@ -218,7 +218,7 @@ const deleteGalleryImages = async (req, res) => {
     var imageIds = JSON.parse(req.body.images);
     for (let i = 0; i < imageIds.length; i++) {
       try {
-        await bucket.delete(mongoose.Types.ObjectId(imageIds[i]));
+        await bucket.delete(new mongoose.Types.ObjectId(String(imageIds[i])));
         deletedCount += 1;
       } catch (error) {
         logger.error(error);
