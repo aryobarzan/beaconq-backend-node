@@ -91,7 +91,7 @@ services:
       - mongo-keyfile-volume:/keyfile
 
   mongo3:
-    image: mongo:lat8.2.1est
+    image: mongo:8.2.1
     command:
       [
         "--replSet",

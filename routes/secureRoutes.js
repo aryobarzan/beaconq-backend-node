@@ -16,7 +16,6 @@ const teacherActions = require("../methods/teacherActions");
 const statsActions = require("../methods/statsActions");
 const syncActions = require("../methods/syncActions");
 const adminActions = require("../methods/adminActions");
-const wordEmbeddingActions = require("../methods/wordEmbeddingActions");
 const achievementActions = require("../methods/data/achievementActions");
 const patronActions = require("../methods/data/patronActions");
 const multer = require("multer");

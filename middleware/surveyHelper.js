@@ -121,13 +121,13 @@ var functions = {
       }
       precedingQuizAnswerPercentages = precedingQuizAnswerPercentages.sort(
         (a, b) => {
-          const a = DateTime.fromJSDate(a.scheduledQuiz.startDateTime, {
+          const aStartMs = DateTime.fromJSDate(a.scheduledQuiz.startDateTime, {
             zone: "utc",
           }).toMillis();
-          const b = DateTime.fromJSDate(b.scheduledQuiz.startDateTime, {
+          const bStartMs = DateTime.fromJSDate(b.scheduledQuiz.startDateTime, {
             zone: "utc",
           }).toMillis();
-          return a - b;
+          return aStartMs - bStartMs;
         },
       );
       let questions = [
