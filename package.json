@@ -4,8 +4,11 @@
   "description": "Back-end server for Project Elpis ('BEACON Q')",
   "main": "server.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node -r dotenv/config server",
-    "dev": "cross-env NODE_ENV=development nodemon -r dotenv/config server"
+    "build": "tsc -p .",
+    "build:watch": "tsc -p . --watch",
+    "dev": "ts-node-dev --respawn --transpile-only server.ts",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p . --noEmit"
   },
   "author": "Aryobarzan Atashpendar",
   "license": "Apache-2.0",
@@ -33,10 +36,18 @@
     "rotating-file-stream": "^3.2.7"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/body-parser": "^1.19.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.10.1",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "pino-pretty": "^13.1.2",
-    "prettier": "3.6.2"
+    "prettier": "3.6.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
   },
   "overrides": {
     "jsonwebtoken": {
