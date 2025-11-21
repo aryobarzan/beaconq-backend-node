@@ -1,26 +1,27 @@
-const express = require("express");
-const courseAnnouncementActions = require("../methods/data/courseAnnouncementActions");
-const courseActions = require("../methods/data/courseActions");
-const topicActions = require("../methods/data/topicActions");
-const courseSessionActions = require("../methods/data/courseSessionActions");
-const quizActions = require("../methods/data/quizActions");
-const activityActions = require("../methods/data/activityActions");
-const fsrsActions = require("../methods/data/fsrsActions");
-const ebisuActions = require("../methods/data/ebisuActions");
-const playActions = require("../methods/playActions");
-const imageActions = require("../methods/imageActions");
-const updateActions = require("../methods/data/updateActions");
-const otherActions = require("../methods/otherActions");
-const userActions = require("../methods/userActions");
-const teacherActions = require("../methods/teacherActions");
-const statsActions = require("../methods/statsActions");
-const syncActions = require("../methods/syncActions");
-const adminActions = require("../methods/adminActions");
-const achievementActions = require("../methods/data/achievementActions");
-const patronActions = require("../methods/data/patronActions");
-const multer = require("multer");
-const upload = multer();
+import express from "express";
+import courseAnnouncementActions from "../methods/data/courseAnnouncementActions";
+import courseActions from "../methods/data/courseActions";
+import topicActions from "../methods/data/topicActions";
+import courseSessionActions from "../methods/data/courseSessionActions";
+import quizActions from "../methods/data/quizActions";
+import activityActions from "../methods/data/activityActions";
+import fsrsActions from "../methods/data/fsrsActions";
+import ebisuActions from "../methods/data/ebisuActions";
+import playActions from "../methods/playActions";
+import imageActions from "../methods/imageActions";
+import updateActions from "../methods/data/updateActions";
+import otherActions from "../methods/otherActions";
+import userActions from "../methods/userActions";
+import teacherActions from "../methods/teacherActions";
+import statsActions from "../methods/statsActions";
+import syncActions from "../methods/syncActions";
+import adminActions from "../methods/adminActions";
+import achievementActions from "../methods/data/achievementActions";
+import patronActions from "../methods/data/patronActions";
+import multer from "multer";
+import e from "express";
 const router = express.Router();
+const upload = multer();
 
 router.post("/activities", activityActions.createOrUpdateActivity);
 router.get("/activities", activityActions.getActivities);
@@ -214,4 +215,5 @@ router.get(
   "/coursePatronProfiles/:course",
   patronActions.getCoursePatronProfiles,
 );
-module.exports = router;
+
+export default router;

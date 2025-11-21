@@ -1,16 +1,17 @@
-const express = require("express");
-const userActions = require("../methods/userActions");
+import express from "express";
+import userActions from "../methods/userActions";
+import otherActions from "../methods/otherActions";
+import androidOriginalActions from "../methods/data/androidOriginalActions";
+import multer from "multer";
+
 const router = express.Router();
-const otherActions = require("../methods/otherActions");
-const androidOriginalActions = require("../methods/data/androidOriginalActions");
-const multer = require("multer");
 const upload = multer();
 
-router.get("/", (req, res) => {
+router.get("/", (_, res) => {
   res.send("Project Elpis ('BEACON Q').");
 });
 
-router.get("/privacy-policy.html", (req, res) => {
+router.get("/privacy-policy.html", (_, res) => {
   // eslint-disable-next-line no-undef
   res.sendFile("privacy-policy.html", { root: __dirname });
 });
@@ -49,4 +50,4 @@ router.get(
 //   androidOriginalActions.getNewPlayStoreListingDetails,
 // );
 
-module.exports = router;
+export default router;
