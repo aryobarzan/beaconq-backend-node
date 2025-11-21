@@ -11,6 +11,8 @@ mongo-keyfile
 *.p12
 # security
 
+# -------------------------
+dist/
 mongo-init.js
 log/
 data/appFeedback

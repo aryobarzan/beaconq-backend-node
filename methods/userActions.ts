@@ -1,75 +1,81 @@
-var User = require("../models/user");
-const jwt = require("jsonwebtoken");
-const process = require("process");
-var bcrypt = require("bcrypt");
-const logger = require("../middleware/logger");
-const jsonSchemaValidator = require("../middleware/jsonSchemaValidator");
-var mongoose = require("mongoose");
+import jwt from "jsonwebtoken";
+import process from "process";
+import bcrypt from "bcrypt";
+import logger from "../middleware/logger";
+import jsonSchemaValidator from "../middleware/jsonSchemaValidator";
+import mongoose from "mongoose";
+import { UserModel, UserDocument } from "../models/user";
+import { Request, Response } from "express";
 
-const RegisterStatus = Object.freeze({
-  Registered: 200,
-  MissingArguments: 400,
-  UsernameExists: 452,
-  InternalError: 500,
-});
-const AuthenticateStatus = Object.freeze({
-  Authenticated: 200,
-  MissingArguments: 400,
-  WrongCredentials: 452,
-  InternalError: 500,
-});
-const DeleteAccountStatus = Object.freeze({
-  Deleted: 200,
-  InvalidUserId: 452,
-  InternalError: 500,
-});
-const GetSecretQuestionStatus = Object.freeze({
-  Retrieved: 200,
-  Empty: 201,
-  MissingArguments: 400,
-  InternalError: 500,
-});
-const AddSecretQuestionStatus = Object.freeze({
-  Added: 200,
-  Exists: 201,
-  MissingArguments: 400,
-  InvalidAnswer: 452,
-  LimitReached: 453,
-  InternalError: 500,
-});
-const VerifySecretQuestionStatus = Object.freeze({
-  Correct: 200,
-  MissingArguments: 400,
-  InvalidQuestionAnswer: 452,
-  InternalError: 500,
-});
-const UpdatePasswordStatus = Object.freeze({
-  Updated: 200,
-  MissingArguments: 400,
-  InvalidPassword: 452,
-  InvalidNewPassword: 453,
-  InvalidUsername: 454,
-  InvalidCredentials: 455,
-  InternalError: 500,
-});
-function generateTokenForUser(user) {
+enum RegisterStatus {
+  Registered = 200,
+  MissingArguments = 400,
+  UsernameExists = 452,
+  InternalError = 500,
+}
+
+enum AuthenticateStatus {
+  Authenticated = 200,
+  MissingArguments = 400,
+  WrongCredentials = 452,
+  InternalError = 500,
+}
+enum DeleteAccountStatus {
+  Deleted = 200,
+  InvalidUserId = 452,
+  InternalError = 500,
+}
+enum GetSecretQuestionStatus {
+  Retrieved = 200,
+  Empty = 201,
+  MissingArguments = 400,
+  InternalError = 500,
+}
+enum AddSecretQuestionStatus {
+  Added = 200,
+  Exists = 201,
+  MissingArguments = 400,
+  InvalidAnswer = 452,
+  LimitReached = 453,
+  InternalError = 500,
+}
+enum VerifySecretQuestionStatus {
+  Correct = 200,
+  MissingArguments = 400,
+  InvalidQuestionAnswer = 452,
+  InternalError = 500,
+}
+enum UpdatePasswordStatus {
+  Updated = 200,
+  MissingArguments = 400,
+  InvalidPassword = 452,
+  InvalidNewPassword = 453,
+  InvalidUsername = 454,
+  InvalidCredentials = 455,
+  InternalError = 500,
+}
+
+function generateTokenForUser(user: UserDocument): string {
   return jwt.sign(user.toJSON(), process.env.PRIVATE_KEY, {
     algorithm: "RS256",
     expiresIn: "5y",
   });
 }
-async function authenticateUser(username, password) {
-  const user = await User.findOne({
+
+async function authenticateUser(username: string, password: string) {
+  const user = await UserModel.findOne({
     username: username,
   });
   if (!user) {
     return { err: null, token: null };
   }
+
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
     return { err: null, token: null };
   }
-  var token = generateTokenForUser(user);
+
+  const token = generateTokenForUser(user);
   return {
     err: null,
     token: token,
@@ -78,7 +84,10 @@ async function authenticateUser(username, password) {
   };
 }
 var functions = {
-  register: async function (req, res) {
+  register: async function (
+    req: Request<{}, {}, { username: string; password: string }>,
+    res: Response,
+  ) {
     if (!req.body.username || !req.body.password) {
       return res
         .status(RegisterStatus.MissingArguments)
@@ -86,7 +95,9 @@ var functions = {
     }
     try {
       // Apply lean() for optimization, as we do not need the Mongoose overhead, e.g., methods, virtual properties, ...
-      const user = await User.findOne({ username: req.body.username }).lean();
+      const user = await UserModel.findOne({
+        username: req.body.username,
+      }).lean();
       if (user) {
         logger.warn(
           `Registration failed: an account with the username ${req.body.username} already exists.`,
@@ -97,7 +108,7 @@ var functions = {
         });
       }
 
-      const newUser = new User({
+      const newUser = new UserModel({
         username: req.body.username,
         password: req.body.password,
       });
@@ -114,14 +125,17 @@ var functions = {
         role: savedUser.role,
         token: token,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(RegisterStatus.InternalError).send({
         message: "Registration failed: an error occurred.",
       });
     }
   },
-  authenticate: async function (req, res) {
+  authenticate: async function (
+    req: Request<{}, {}, { username: string; password: string }>,
+    res: Response,
+  ) {
     if (!req.body.username || !req.body.password) {
       return res.status(AuthenticateStatus.WrongCredentials).send({
         message: "Authentication failed: indicate your username and password.",
@@ -142,22 +156,27 @@ var functions = {
         username: result.username,
         role: result.role,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res
         .status(AuthenticateStatus.InternalError)
         .send({ message: "Authentication failed: an error occurred." });
     }
   },
-  isTokenValid: function (req, res) {
+  isTokenValid: function (
+    req: Request<{}, {}, {}, { token: string }>,
+    res: Response,
+  ) {
     // No need for any actual business logic here: this function is called as part of a secure route,
     // meaning the authentication middleware has already performed its verification logic.
     // As such, if this function is reached, then the user's token is valid.
-    res.status(200).send({ message: "Token is valid.", token: req.token });
+    return res
+      .status(200)
+      .send({ message: "Token is valid.", token: req.token });
   },
-  deleteAccount: async function (req, res) {
+  deleteAccount: async function (req: Request, res: Response) {
     try {
-      const user = await User.findById(req.token._id).exec();
+      const user = await UserModel.findById(req.token._id).exec();
       if (!user) {
         return res.status(DeleteAccountStatus.InvalidUserId).send({
           message:
@@ -166,7 +185,9 @@ var functions = {
             ": user not found.",
         });
       }
-      const deletedUser = await User.findByIdAndDelete(req.token._id).exec();
+      const deletedUser = await UserModel.findByIdAndDelete(
+        req.token._id,
+      ).exec();
       if (!deletedUser) {
         return res.status(DeleteAccountStatus.InternalError).send({
           message:
@@ -178,7 +199,7 @@ var functions = {
       return res
         .status(DeleteAccountStatus.Deleted)
         .send({ message: "Deleted account for id." });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(DeleteAccountStatus.InternalError).send({
         message:
@@ -189,14 +210,19 @@ var functions = {
     }
   },
   /// Authentication not required
-  getSecretQuestions: async function (req, res) {
+  getSecretQuestions: async function (
+    req: Request<{ username: string }>,
+    res: Response,
+  ) {
     if (!req.params.username) {
       return res.status(GetSecretQuestionStatus.MissingArguments).send({
         message: "Invalid request.",
       });
     }
     try {
-      const user = await User.findOne({ username: req.params.username }).lean();
+      const user = await UserModel.findOne({
+        username: req.params.username,
+      }).lean();
       if (!user) {
         return res.status(GetSecretQuestionStatus.MissingArguments).send({
           message: "Invalid request.",
@@ -215,14 +241,17 @@ var functions = {
           ),
         ),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetSecretQuestionStatus.InternalError).send({
         message: "An error occurred retrieving secret question.",
       });
     }
   },
-  addSecretQuestion: async function (req, res) {
+  addSecretQuestion: async function (
+    req: Request<{}, {}, { question: string; answer: string }>,
+    res: Response,
+  ) {
     if (!req.body.question || !req.body.answer) {
       return res.status(AddSecretQuestionStatus.MissingArguments).send({
         message: "Invalid request.",
@@ -243,7 +272,7 @@ var functions = {
     try {
       // important: hash answer in lowercase
       const hash = await bcrypt.hash(answer.toLowerCase(), 10);
-      const updateResult = await User.updateOne(
+      const updateResult = await UserModel.updateOne(
         {
           _id: req.token._id,
           "secretQuestions.question": { $ne: req.body.question },
@@ -268,12 +297,13 @@ var functions = {
       return res.status(AddSecretQuestionStatus.InternalError).send({
         message: "An error occurred while storing the secret question. (ERR23)",
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      if (err.name === "ValidationError") {
+      if (err instanceof Error && err.name === "ValidationError") {
         let errorMessage =
           "Failed to add secret question: your answer may be invalid or you've reached the maximum limit.";
         if (
+          err instanceof mongoose.Error.ValidationError &&
           err.errors &&
           err.errors["secretQuestions"] &&
           err.errors["secretQuestions"].message
@@ -289,14 +319,17 @@ var functions = {
       });
     }
   },
-  verifySecretQuestion: async function (req, res) {
+  verifySecretQuestion: async function (
+    req: Request<{}, {}, { question: string; answer: string }>,
+    res: Response,
+  ) {
     if (!req.body.question || !req.body.answer) {
       return res.status(VerifySecretQuestionStatus.MissingArguments).send({
         message: "Invalid request.",
       });
     }
     try {
-      const user = await User.findById(req.token._id).exec();
+      const user = await UserModel.findById(req.token._id).exec();
       if (!user) {
         return res.status(VerifySecretQuestionStatus.InternalError).send({
           message:
@@ -304,10 +337,10 @@ var functions = {
         });
       }
       if (user.secretQuestions) {
-        for (let i = 0; i < user.secretQuestions.length; i++) {
-          if (req.body.question === user.secretQuestions[i].question) {
-            let secretAnswer = user.secretQuestions[i].answer;
-            let isMatch = await bcrypt.compare(
+        for (const secretQuestion of user.secretQuestions) {
+          if (req.body.question === secretQuestion.question) {
+            const secretAnswer = secretQuestion.answer;
+            const isMatch = await bcrypt.compare(
               req.body.answer.toLowerCase(),
               secretAnswer,
             );
@@ -322,7 +355,7 @@ var functions = {
       return res.status(VerifySecretQuestionStatus.InvalidQuestionAnswer).send({
         message: "Wrong secret question/answer.",
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(VerifySecretQuestionStatus.InternalError).send({
         message:
@@ -330,7 +363,10 @@ var functions = {
       });
     }
   },
-  updatePasswordAuthenticated: async function (req, res) {
+  updatePasswordAuthenticated: async function (
+    req: Request<{}, {}, { oldPassword: string; newPassword: string }>,
+    res: Response,
+  ) {
     if (!req.body.oldPassword || !req.body.newPassword) {
       return res.status(UpdatePasswordStatus.MissingArguments).send({
         message: "Invalid request.",
@@ -346,7 +382,7 @@ var functions = {
     }
 
     try {
-      const user = await User.findById(req.token._id).exec();
+      const user = await UserModel.findById(req.token._id).exec();
       if (!user) {
         return res.status(UpdatePasswordStatus.InvalidUsername).send({
           message: "Failed to update password: username not found. (ERR4)",
@@ -371,7 +407,7 @@ var functions = {
       return res.status(UpdatePasswordStatus.Updated).send({
         message: "Password updated.",
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(UpdatePasswordStatus.InternalError).send({
         message: "An error occurred while updating your password. (ERR3)",
@@ -379,7 +415,18 @@ var functions = {
     }
   },
   /// No authentication here: instead, the user has to provide answers to their account's secret questions
-  updatePassword: async function (req, res) {
+  updatePassword: async function (
+    req: Request<
+      {},
+      {},
+      {
+        username: string;
+        newPassword: string;
+        secretQuestions: { question: string; answer: string }[];
+      }
+    >,
+    res: Response,
+  ) {
     if (
       !req.body.username ||
       !req.body.newPassword ||
@@ -401,112 +448,113 @@ var functions = {
       });
     }
 
-    let session;
+    let responseToSend = {
+      code: UpdatePasswordStatus.InternalError,
+      payload: { message: "An error occurred while updating your password." },
+    };
+
     try {
-      session = await mongoose.startSession();
-    } catch (err) {
+      const session = await mongoose.startSession();
+
+      try {
+        await session.withTransaction(async () => {
+          const user = await UserModel.findOne({ username: req.body.username })
+            .session(session)
+            .exec();
+          if (!user) {
+            responseToSend = {
+              code: UpdatePasswordStatus.InvalidUsername,
+              payload: {
+                message:
+                  "Failed to update password: username not found. (ERR4)",
+              },
+            };
+            throw new Error("UsernameNotFound");
+          }
+          if (!user.secretQuestions || user.secretQuestions.length === 0) {
+            // If the user's account has no secret questions set up, do not allow password updates
+            responseToSend = {
+              code: UpdatePasswordStatus.InvalidCredentials,
+              payload: {
+                message: "Password update failed: wrong credentials.",
+              },
+            };
+            throw new Error("WrongCredentialsNoSecrets");
+          }
+
+          let secretQuestionAnswerMatches = 0;
+          for (const secretQuestion of user.secretQuestions) {
+            for (const userSecretQuestionAnswer of req.body.secretQuestions) {
+              if (
+                userSecretQuestionAnswer["question"] === secretQuestion.question
+              ) {
+                const isMatch = await bcrypt.compare(
+                  userSecretQuestionAnswer["answer"].toLowerCase(),
+                  secretQuestion.answer,
+                );
+                if (isMatch) {
+                  secretQuestionAnswerMatches += 1;
+                }
+                break;
+              }
+            }
+          }
+          if (secretQuestionAnswerMatches !== user.secretQuestions.length) {
+            responseToSend = {
+              code: UpdatePasswordStatus.InvalidCredentials,
+              payload: {
+                message: "Password update failed: wrong credentials.",
+              },
+            };
+            throw new Error("WrongCredentials");
+          }
+          // TODO: do not allow same old password
+          user.password = newPassword;
+          const updatedUser = await user.save({ session });
+          if (!updatedUser) {
+            responseToSend = {
+              code: UpdatePasswordStatus.InternalError,
+              payload: {
+                message:
+                  "An error occurred while updating your password. (ERR1)",
+              },
+            };
+            throw new Error("UserUpdateFailed");
+          }
+          responseToSend = {
+            code: UpdatePasswordStatus.Updated,
+            payload: { message: "Password updated." },
+          };
+        });
+      } catch (err: unknown) {
+        const knownErrors = new Set([
+          "UsernameNotFound",
+          "WrongCredentialsNoSecrets",
+          "WrongCredentials",
+          "UserUpdateFailed",
+        ]);
+        // Unexpected error
+        if (!(err instanceof Error) || !knownErrors.has(err.message)) {
+          logger.error(err);
+          responseToSend = {
+            code: UpdatePasswordStatus.InternalError,
+            payload: {
+              message: "An error occurred while updating your password. (ERR3)",
+            },
+          };
+        }
+      } finally {
+        await session.endSession();
+      }
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(UpdatePasswordStatus.InternalError).send({
         message: "An error occurred while updating your password. (ERR5)",
       });
     }
 
-    let responseToSend = {
-      code: UpdatePasswordStatus.InternalError,
-      payload: { message: "An error occurred while updating your password." },
-    };
-    try {
-      await session.withTransaction(async () => {
-        const user = await User.findOne({ username: req.body.username })
-          .session(session)
-          .exec();
-        if (!user) {
-          responseToSend = {
-            code: UpdatePasswordStatus.InvalidUsername,
-            payload: {
-              message: "Failed to update password: username not found. (ERR4)",
-            },
-          };
-          throw new Error("UsernameNotFound");
-        }
-        if (!user.secretQuestions || user.secretQuestions.length === 0) {
-          // If the user's account has no secret questions set up, do not allow password updates
-          responseToSend = {
-            code: UpdatePasswordStatus.InvalidCredentials,
-            payload: {
-              message: "Password update failed: wrong credentials.",
-            },
-          };
-          throw new Error("WrongCredentialsNoSecrets");
-        }
-
-        let secretQuestionAnswerMatches = 0;
-        for (let i = 0; i < user.secretQuestions.length; i++) {
-          let secretQuestion = user.secretQuestions[i];
-          for (let j = 0; j < req.body.secretQuestions.length; j++) {
-            let userSecretQuestionAnswer = req.body.secretQuestions[j];
-            if (
-              userSecretQuestionAnswer["question"] === secretQuestion.question
-            ) {
-              let isMatch = await bcrypt.compare(
-                userSecretQuestionAnswer["answer"].toLowerCase(),
-                secretQuestion.answer,
-              );
-              if (isMatch) {
-                secretQuestionAnswerMatches += 1;
-              }
-              break;
-            }
-          }
-        }
-        if (secretQuestionAnswerMatches != user.secretQuestions.length) {
-          responseToSend = {
-            code: UpdatePasswordStatus.InvalidCredentials,
-            payload: {
-              message: "Password update failed: wrong credentials.",
-            },
-          };
-          throw new Error("WrongCredentials");
-        }
-        // TODO: do not allow same old password
-        user.password = newPassword;
-        const updatedUser = await user.save({ session });
-        if (!updatedUser) {
-          responseToSend = {
-            code: UpdatePasswordStatus.InternalError,
-            payload: {
-              message: "An error occurred while updating your password. (ERR1)",
-            },
-          };
-          throw new Error("UserUpdateFailed");
-        }
-        responseToSend = {
-          code: UpdatePasswordStatus.Updated,
-          payload: { message: "Password updated." },
-        };
-      });
-    } catch (err) {
-      const knownErrors = new Set([
-        "UsernameNotFound",
-        "WrongCredentialsNoSecrets",
-        "WrongCredentials",
-        "UserUpdateFailed",
-      ]);
-      // Unexpected error
-      if (!err || !err.message || !knownErrors.has(err.message)) {
-        logger.error(err);
-        responseToSend = {
-          code: UpdatePasswordStatus.InternalError,
-          payload: {
-            message: "An error occurred while updating your password. (ERR3)",
-          },
-        };
-      }
-    } finally {
-      if (session) session.endSession();
-    }
     return res.status(responseToSend.code).send(responseToSend.payload);
   },
 };
 
-module.exports = functions;
+export default functions;
