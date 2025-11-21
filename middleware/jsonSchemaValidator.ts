@@ -1,4 +1,4 @@
-const Ajv = require("ajv");
+import Ajv from "ajv";
 const ajv = new Ajv();
 
 const userSecretQuestionAnswersSchema = {
@@ -15,7 +15,7 @@ const userSecretQuestionAnswersSchema = {
 };
 
 const validateUserSecretQuestionAnswersSchema = ajv.compile(
-  userSecretQuestionAnswersSchema
+  userSecretQuestionAnswersSchema,
 );
 
-module.exports = { validateUserSecretQuestionAnswersSchema };
+export default validateUserSecretQuestionAnswersSchema;

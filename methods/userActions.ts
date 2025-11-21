@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import process from "process";
 import bcrypt from "bcrypt";
 import logger from "../middleware/logger";
-import jsonSchemaValidator from "../middleware/jsonSchemaValidator";
+import validateUserSecretQuestionAnswersSchema from "../middleware/jsonSchemaValidator";
 import mongoose from "mongoose";
 import { UserModel, UserDocument } from "../models/user";
 import { Request, Response } from "express";
@@ -445,9 +445,7 @@ const functions = {
       !req.body.username ||
       !req.body.newPassword ||
       !req.body.secretQuestions ||
-      !jsonSchemaValidator.validateUserSecretQuestionAnswersSchema(
-        req.body.secretQuestions,
-      )
+      !validateUserSecretQuestionAnswersSchema(req.body.secretQuestions)
     ) {
       return res.status(UpdatePasswordStatus.MissingArguments).send({
         message: "Invalid request.",
