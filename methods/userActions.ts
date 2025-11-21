@@ -62,6 +62,21 @@ function generateTokenForUser(user: UserDocument): string {
   });
 }
 
+function validatePassword(password: string): {
+  valid: boolean;
+  error?: string;
+} {
+  // Enforce allowed characters: digits, ASCII letters, underscore, ?, !, +, and hyphen (-)
+  const allowedPatternRegex = /^[0-9A-Za-z_?!+\-]+$/;
+  if (password.length < 8 || !allowedPatternRegex.test(password)) {
+    return {
+      valid: false,
+      error: "Your new password does not conform to the requirements.",
+    };
+  }
+  return { valid: true };
+}
+
 async function authenticateUser(username: string, password: string) {
   const user = await UserModel.findOne({
     username: username,
@@ -83,7 +98,7 @@ async function authenticateUser(username: string, password: string) {
     role: user.role,
   };
 }
-var functions = {
+const functions = {
   register: async function (
     req: Request<{}, {}, { username: string; password: string }>,
     res: Response,
@@ -372,12 +387,11 @@ var functions = {
         message: "Invalid request.",
       });
     }
-    const newPassword = String(req.body.newPassword);
-    const allowedPatternRegex = /^[0-9A-Za-z_?!+\-]+$/;
-    // Enforce allowed characters: digits, ASCII letters, underscore, ?, !, +, and hyphen (-)
-    if (newPassword.length < 8 || !allowedPatternRegex.test(newPassword)) {
+    const newPassword = req.body.newPassword;
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
       return res.status(UpdatePasswordStatus.InvalidNewPassword).send({
-        message: "Your new password does not conform to the requirements.",
+        message: validation.error,
       });
     }
 
@@ -439,12 +453,11 @@ var functions = {
         message: "Invalid request.",
       });
     }
-    const newPassword = String(req.body.newPassword);
-    const allowedPatternRegex = /^[0-9A-Za-z_?!+\-]+$/;
-    // Enforce allowed characters: digits, ASCII letters, underscore, ?, !, +, and hyphen (-)
-    if (newPassword.length < 8 || !allowedPatternRegex.test(newPassword)) {
+    const newPassword = req.body.newPassword;
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
       return res.status(UpdatePasswordStatus.InvalidNewPassword).send({
-        message: "Your new password does not conform to the requirements.",
+        message: validation.error,
       });
     }
 
