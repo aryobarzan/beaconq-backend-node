@@ -1,15 +1,38 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var activitySchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
+
+export interface CodeBlock {
+  code: string;
+  language: string;
+  theme: string;
+}
+
+export interface Activity {
+  title: string;
+  // activityType: string;
+  question: string;
+  difficulty: number;
+  taxonomy: string;
+  time: number;
+  images?: Types.ObjectId[];
+  codeBlocks?: CodeBlock[];
+  tags?: string[];
+  topics?: Types.ObjectId[];
+  externalVideoLinks?: string[];
+  version: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type ActivityDocument = HydratedDocument<Activity>;
+
+// Base Activity
+
+const activitySchema = new Schema(
   {
     title: {
       type: String,
       required: true,
     },
-    // activityType: {
-    //     type: String,
-    //     required: true
-    // },
     question: {
       type: String,
       required: true,
@@ -82,10 +105,34 @@ var activitySchema = new Schema(
 );
 // Improve populate() operation performance
 activitySchema.index({ topics: 1 }, { unique: false });
-var activityModel = mongoose.model("Activity", activitySchema);
 
-// Choice Activity (& Recall)
-var choiceActivitySchema = new Schema(
+const ActivityModel: Model<ActivityDocument> = mongoose.model<ActivityDocument>(
+  "Activity",
+  activitySchema,
+);
+
+// Choice (Recall) Activity
+
+export interface ChoiceActivityAnswer {
+  answer: string;
+  alternatives?: string[];
+  isCorrect: boolean;
+  feedback?: string;
+  hint?: string;
+}
+
+export interface ChoiceActivity extends Activity {
+  answers: ChoiceActivityAnswer[];
+  status: string;
+  isOrdered: boolean;
+  allowMisspellings: boolean;
+  useSemanticSimilarity: boolean;
+  generalRecallHint?: string;
+}
+
+export type ChoiceActivityDocument = HydratedDocument<ChoiceActivity>;
+
+const choiceActivitySchema = new Schema(
   {
     answers: [
       {
@@ -137,15 +184,28 @@ var choiceActivitySchema = new Schema(
       required: false,
     },
   },
+  // "collection" and "timestamps" not necessary as they are inherited from the base Activity schema, just retained for clarity
   { collection: "activities", discriminatorKey: "kind", timestamps: true },
 );
-var choiceActivityDiscriminator = activityModel.discriminator(
-  "ChoiceActivity",
-  choiceActivitySchema,
-);
+
+export const ChoiceActivityModel: Model<ChoiceActivityDocument> =
+  ActivityModel.discriminator<ChoiceActivityDocument>(
+    "ChoiceActivity",
+    choiceActivitySchema,
+  );
 
 // DartBlock Activity
-var dartBlockActivitySchema = new Schema(
+
+export interface DartBlockActivity extends Activity {
+  solution: Map<string, any>;
+  evaluator: Map<string, any>;
+  disableNativeFunctions: boolean;
+  feedback?: string;
+}
+
+export type DartBlockActivityDocument = HydratedDocument<DartBlockActivity>;
+
+const dartBlockActivitySchema = new Schema(
   {
     solution: {
       type: Map,
@@ -164,14 +224,14 @@ var dartBlockActivitySchema = new Schema(
       required: false,
     },
   },
+  // "collection" and "timestamps" not necessary as they are inherited from the base Activity schema, just retained for clarity
   { collection: "activities", discriminatorKey: "kind", timestamps: true },
 );
-var dartBlockActivityDiscriminator = activityModel.discriminator(
-  "DartBlockActivity",
-  dartBlockActivitySchema,
-);
+export const DartBlockActivityModel: Model<DartBlockActivityDocument> =
+  ActivityModel.discriminator<DartBlockActivityDocument>(
+    "DartBlockActivity",
+    dartBlockActivitySchema,
+  );
 
-module.exports.BaseActivitySchema = activitySchema;
-module.exports.BaseActivity = activityModel;
-module.exports.ChoiceActivity = choiceActivityDiscriminator;
-module.exports.DartBlockActivity = dartBlockActivityDiscriminator;
+export default ActivityModel;
+export { activitySchema };

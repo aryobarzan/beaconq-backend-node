@@ -1,7 +1,22 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
 
-var fsrsCardSchema = new Schema({
+// FSRS card
+
+export interface FSRSCard {
+  due: Date;
+  stability: number;
+  difficulty: number;
+  elapsedDays: number;
+  scheduledDays: number;
+  repetitions: number;
+  lapses: number;
+  status: string;
+  lastReview?: Date;
+}
+
+export type FSRSCardDocument = HydratedDocument<FSRSCard>;
+
+const fsrsCardSchema = new Schema({
   due: {
     type: Date,
     required: true,
@@ -39,7 +54,20 @@ var fsrsCardSchema = new Schema({
     required: false,
   },
 });
-var fsrsReviewLogSchema = new Schema({
+
+// FSRS review log
+
+export interface FSRSReviewLog {
+  rating: string;
+  elapsedDays: number;
+  scheduledDays: number;
+  review: Date;
+  status: string;
+}
+
+export type FSRSReviewLogDocument = HydratedDocument<FSRSReviewLog>;
+
+const fsrsReviewLogSchema = new Schema({
   rating: {
     type: String,
     required: true,
@@ -62,7 +90,22 @@ var fsrsReviewLogSchema = new Schema({
   },
 });
 
-var fsrsSchema = new Schema(
+// FSRS
+
+export interface FSRS {
+  card: FSRSCard;
+  reviewLog: FSRSReviewLog;
+  dataType: "activity" | "topic";
+  dataId: string;
+  user: Types.ObjectId;
+  version: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type FSRSDocument = HydratedDocument<FSRS>;
+
+const fsrsSchema = new Schema(
   {
     card: {
       type: fsrsCardSchema,
@@ -93,7 +136,7 @@ var fsrsSchema = new Schema(
       required: true,
       validate: {
         validator: Number.isInteger,
-        message: "{VALUE} is not an integer value",
+        message: (v: any) => `${v} is not an integer value`,
       },
     },
   },
@@ -101,4 +144,7 @@ var fsrsSchema = new Schema(
 );
 fsrsSchema.index({ user: 1, dataId: 1, dataType: 1 }, { unique: true });
 
-module.exports = mongoose.model("FSRSModel", fsrsSchema);
+export const FSRSModel: Model<FSRSDocument> = mongoose.model<FSRSDocument>(
+  "FSRSModel",
+  fsrsSchema,
+);

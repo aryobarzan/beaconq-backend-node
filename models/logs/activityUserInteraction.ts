@@ -1,6 +1,23 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var activityUserInteractionSchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model } from "mongoose";
+
+export interface ActivityUserInteraction {
+  user: mongoose.Types.ObjectId;
+  activity: mongoose.Types.ObjectId;
+  activityVersion: number;
+  playContextId?: string;
+  scheduledQuiz?: mongoose.Types.ObjectId;
+  type: "viewedHints" | "viewedPointers";
+  content?: string;
+  timestamp: Date;
+  serverTimestamp: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type ActivityUserInteractionDocument =
+  HydratedDocument<ActivityUserInteraction>;
+
+const activityUserInteractionSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -52,7 +69,7 @@ var activityUserInteractionSchema = new Schema(
   {
     collection: "activity_user_interactions",
     timestamps: true,
-  }
+  },
 );
 activityUserInteractionSchema.index(
   {
@@ -62,11 +79,11 @@ activityUserInteractionSchema.index(
     type: 1,
     content: 1,
   },
-  { unique: true }
+  { unique: true },
 );
 
-var activityUserInteractionModel = mongoose.model(
-  "ActivityUserInteraction",
-  activityUserInteractionSchema
-);
-module.exports = activityUserInteractionModel;
+export const ActivityUserInteractionModel: Model<ActivityUserInteractionDocument> =
+  mongoose.model<ActivityUserInteractionDocument>(
+    "ActivityUserInteraction",
+    activityUserInteractionSchema,
+  );

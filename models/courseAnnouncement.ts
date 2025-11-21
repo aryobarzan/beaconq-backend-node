@@ -1,6 +1,21 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var courseAnnouncementSchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
+
+export interface CourseAnnouncement {
+  course: Types.ObjectId;
+  author: Types.ObjectId;
+  title: string;
+  message: string;
+  dateTime?: Date;
+  courseSessions?: Types.ObjectId[];
+  topics?: Types.ObjectId[];
+  version: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type CourseAnnouncementDocument = HydratedDocument<CourseAnnouncement>;
+
+const courseAnnouncementSchema = new Schema(
   {
     course: {
       type: Schema.Types.ObjectId,
@@ -45,7 +60,7 @@ var courseAnnouncementSchema = new Schema(
       required: true,
       validate: {
         validator: Number.isInteger,
-        message: "{VALUE} is not an integer value",
+        message: (v) => `${v} is not an integer value`,
       },
     },
   },
@@ -55,9 +70,9 @@ var courseAnnouncementSchema = new Schema(
   },
 );
 courseAnnouncementSchema.index({ course: 1, dateTime: 1 }, { unique: false });
-var courseAnnouncementModel = mongoose.model(
-  "CourseAnnouncement",
-  courseAnnouncementSchema,
-);
 
-module.exports = courseAnnouncementModel;
+export const CourseAnnouncementModel: Model<CourseAnnouncementDocument> =
+  mongoose.model<CourseAnnouncementDocument>(
+    "CourseAnnouncement",
+    courseAnnouncementSchema,
+  );

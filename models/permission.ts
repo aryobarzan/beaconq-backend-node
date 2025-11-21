@@ -1,6 +1,22 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var permissionSchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
+
+export interface Permission {
+  user: Types.ObjectId;
+  resourceType:
+    | "ACTIVITY"
+    | "QUIZ"
+    | "TOPIC"
+    | "COURSE"
+    | "COURSE_ANNOUNCEMENT";
+  resource: Types.ObjectId;
+  level: number; // 1 - execute, 2 - write, 4 - read (UNIX style)
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type PermissionDocument = HydratedDocument<Permission>;
+
+const permissionSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -30,12 +46,13 @@ var permissionSchema = new Schema(
   },
   { collection: "permissions", timestamps: true },
 );
-// Permissions: 4 - read / 2 - write / 1 - execute (UNIX style)
 permissionSchema.index(
   { resourceType: 1, user: 1, level: 1, resource: 1 },
   { unique: true },
 );
-var permissionModel = mongoose.model("Permission", permissionSchema);
+
+export const PermissionModel: Model<PermissionDocument> =
+  mongoose.model<PermissionDocument>("Permission", permissionSchema);
 
 // Source/Inspiration: https://exploringjs.com/es6/ch_numbers.html#_use-case-for-octal-literals-unix-style-file-permissions
 /**
@@ -46,7 +63,10 @@ var permissionModel = mongoose.model("Permission", permissionSchema);
  *                                       e.g., 7 (rwx), 5 (r-x), or 6 (rw-).
  * @returns {boolean} True if all required permissions are present, false otherwise.
  */
-function hasPermissions(permissions, userPermissionValue) {
+function hasPermissions(
+  permissions: string[],
+  userPermissionValue: number,
+): boolean {
   // bitmask mapping for each permission type
   const PermissionMask = {
     read: 4, // 100 in binary
@@ -76,5 +96,4 @@ function hasPermissions(permissions, userPermissionValue) {
   return (userPermissionValue & totalRequiredMask) === totalRequiredMask;
 }
 
-module.exports.Permission = permissionModel;
-module.exports.hasPermissions = hasPermissions;
+export { hasPermissions };

@@ -1,7 +1,27 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
+import mongoose, { HydratedDocument, Schema, Model } from "mongoose";
 
-var surveyAnswerSchema = new Schema(
+export interface SurveyQuestionAnswer {
+  question: string;
+  questionType: string;
+  answer: string;
+  min?: number;
+  max?: number;
+  isMultipleChoice?: boolean;
+  choices?: string[];
+}
+
+export interface SurveyAnswer {
+  user: mongoose.Types.ObjectId;
+  scheduledQuiz: mongoose.Types.ObjectId;
+  serverTimestamp: Date;
+  answers: SurveyQuestionAnswer[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type SurveyAnswerDocument = HydratedDocument<SurveyAnswer>;
+
+const surveyAnswerSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -48,12 +68,9 @@ var surveyAnswerSchema = new Schema(
       },
     ],
   },
-  { collection: "survey_answers", timestamps: true }
+  { collection: "survey_answers", timestamps: true },
 );
 surveyAnswerSchema.index({ scheduledQuiz: 1, user: 1 }, { unique: true });
-var surveyAnswerSchemaModel = mongoose.model(
-  "SurveyAnswer",
-  surveyAnswerSchema
-);
 
-module.exports = surveyAnswerSchemaModel;
+export const SurveyAnswerModel: Model<SurveyAnswerDocument> =
+  mongoose.model<SurveyAnswerDocument>("SurveyAnswer", surveyAnswerSchema);

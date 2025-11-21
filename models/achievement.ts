@@ -1,6 +1,19 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var achievementSchema = new Schema(
+import mongoose, { Schema, HydratedDocument, Model, Types } from "mongoose";
+
+export interface Achievement {
+  title: string;
+  description: string;
+  points: number;
+  course?: Types.ObjectId;
+  hideDescription: boolean;
+  criteria: Map<string, number>;
+  author: Types.ObjectId;
+  version: number;
+}
+
+export type AchievementDocument = HydratedDocument<Achievement>;
+
+const achievementSchema = new Schema(
   {
     title: {
       type: String,
@@ -53,6 +66,7 @@ var achievementSchema = new Schema(
   },
   { collection: "achievements", timestamps: true },
 );
-var achievementModel = mongoose.model("Achievement", achievementSchema);
+const AchievementModel: Model<AchievementDocument> =
+  mongoose.model<AchievementDocument>("Achievement", achievementSchema);
 
-module.exports = achievementModel;
+export { achievementSchema as schema, AchievementModel as model };

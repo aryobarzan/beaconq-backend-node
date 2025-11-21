@@ -1,6 +1,27 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var activityComputedDifficultyDataSchema = new Schema({
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
+
+// Activity computed difficulty data
+
+export interface ActivityComputedDifficultyData {
+  activityHardness: number;
+  activityHardnessWeight: number;
+  activityDifficulty: number;
+  activityRecallProbability: number;
+  relatedActivitiesCount: number;
+  relatedActivitiesAverageRecallProbability: number;
+  relatedActivitiesAverageDifficulty: number;
+  courseMastery?: number; // deprecated in 5.0.0
+  difficultyAlgorithmVersionCode: number;
+  activityComponentWeight: number;
+  relatedActivitiesComponentWeight: number;
+  coreComponentWeight: number;
+  computedDifficulty: number;
+}
+
+export type ActivityComputedDifficultyDataDocument =
+  HydratedDocument<ActivityComputedDifficultyData>;
+
+const activityComputedDifficultyDataSchema = new Schema({
   activityHardness: Number,
   activityHardnessWeight: Number,
   activityDifficulty: Number,
@@ -17,7 +38,39 @@ var activityComputedDifficultyDataSchema = new Schema({
   computedDifficulty: Number,
 });
 
-var activityUserAnswerSchema = new Schema(
+// Activity user answer
+
+export interface ActivityUserAnswer {
+  user: Types.ObjectId;
+  playContextId?: string;
+  scheduledQuiz?: Types.ObjectId;
+  courseContext?: Types.ObjectId; // added in 4.0.0
+  activity: Types.ObjectId;
+  activityVersion: number;
+  /// "Hardness"
+  activityDifficulty: number;
+  /// Can be one of following:
+  /// (1) Fixed difficulty
+  /// (2) Computed difficulty (client-side). In this case, difficulty == computedDifficultyData.computedDifficulty
+  /// (3) Default difficulty: 0.5
+  difficulty: number;
+  /// The individual parameters constituting the difficulty computation process.
+  /// This field is null for 'difficulty' cases (1) and (3).
+  computedDifficultyData?: ActivityComputedDifficultyData; // added in 2.3.0.
+  activityAnswerType: string;
+  activityPlayTime: number;
+  isCorrect: boolean;
+  difficultyModifier?: Map<string, any>;
+  patron?: string; // added in 5.0.0
+  timestamp: Date;
+  serverTimestamp: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type ActivityUserAnswerDocument = HydratedDocument<ActivityUserAnswer>;
+
+const activityUserAnswerSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -33,7 +86,6 @@ var activityUserAnswerSchema = new Schema(
       ref: "ScheduledQuiz",
       required: false,
     },
-    /// Introduced with BEACON Q 4.0.0
     courseContext: {
       type: Schema.Types.ObjectId,
       ref: "Course",
@@ -102,7 +154,6 @@ var activityUserAnswerSchema = new Schema(
       type: Map,
       required: false,
     },
-    // Introduced with BEACON Q 5.0.0
     patron: {
       type: String,
       required: false,
@@ -149,12 +200,25 @@ activityUserAnswerSchema.index(
   { playContextId: 1, user: 1 },
   { unique: false },
 );
-var activityUserAnswerModel = mongoose.model(
-  "ActivityUserAnswer",
-  activityUserAnswerSchema,
-);
 
-var choiceActivityUserAnswerSchema = new Schema(
+export const ActivityUserAnswerModel: Model<ActivityUserAnswerDocument> =
+  mongoose.model<ActivityUserAnswerDocument>(
+    "ActivityUserAnswer",
+    activityUserAnswerSchema,
+  );
+
+// Choice Activity User Answer
+
+export interface ChoiceActivityUserAnswer extends ActivityUserAnswer {
+  answers: { answer: string; evaluation: string }[];
+  answerOrder: string[];
+  isCorrectOrder: boolean;
+}
+
+export type ChoiceActivityUserAnswerDocument =
+  HydratedDocument<ChoiceActivityUserAnswer>;
+
+const choiceActivityUserAnswerSchema = new Schema(
   {
     answers: [
       {
@@ -179,19 +243,32 @@ var choiceActivityUserAnswerSchema = new Schema(
       default: true,
     },
   },
+  // "collection" and "timestamps" not necessary as they are inherited from the base Activity schema, just retained for clarity
   {
     collection: "activity_user_answers",
     discriminatorKey: "kind",
     timestamps: true,
   },
 );
-var choiceActivityUserAnswerDiscriminator =
-  activityUserAnswerModel.discriminator(
+export const ChoiceActivityUserAnswerModel: Model<ChoiceActivityUserAnswerDocument> =
+  ActivityUserAnswerModel.discriminator<ChoiceActivityUserAnswerDocument>(
     "ChoiceActivityUserAnswer",
     choiceActivityUserAnswerSchema,
   );
 
-var recallActivityUserAnswerSchema = new Schema(
+// Recall Activity User Answer
+
+export interface RecallActivityUserAnswer extends ActivityUserAnswer {
+  answers: { answer: string; evaluation: string }[];
+  answerOrder: string[];
+  isCorrectOrder: boolean;
+  levenshteinThreshold?: number;
+}
+
+export type RecallActivityUserAnswerDocument =
+  HydratedDocument<RecallActivityUserAnswer>;
+
+const recallActivityUserAnswerSchema = new Schema(
   {
     answers: [
       {
@@ -222,6 +299,7 @@ var recallActivityUserAnswerSchema = new Schema(
       max: 1.0,
     },
   },
+  // "collection" and "timestamps" not necessary as they are inherited from the base Activity schema, just retained for clarity
   {
     collection: "activity_user_answers",
     discriminatorKey: "kind",
@@ -229,13 +307,24 @@ var recallActivityUserAnswerSchema = new Schema(
   },
 );
 
-var recallActivityUserAnswerDiscriminator =
-  activityUserAnswerModel.discriminator(
+export const RecallActivityUserAnswerModel: Model<RecallActivityUserAnswerDocument> =
+  ActivityUserAnswerModel.discriminator<RecallActivityUserAnswerDocument>(
     "RecallActivityUserAnswer",
     recallActivityUserAnswerSchema,
   );
 
-var dartBlockActivityUserAnswerSchema = new Schema(
+// DartBlock activity user answer
+
+export interface DartBlockActivityUserAnswer extends ActivityUserAnswer {
+  userSolution: Map<string, any>;
+  evaluationResult: Map<string, any>;
+  dartBlockInteractions?: Map<string, any>[]; // added in 5.1.1
+}
+
+export type DartBlockActivityUserAnswerDocument =
+  HydratedDocument<DartBlockActivityUserAnswer>;
+
+const dartBlockActivityUserAnswerSchema = new Schema(
   {
     userSolution: {
       type: Map,
@@ -245,7 +334,6 @@ var dartBlockActivityUserAnswerSchema = new Schema(
       type: Map,
       required: true,
     },
-    /// Introduced with BEACON Q 5.1.1
     dartBlockInteractions: [
       {
         type: Map,
@@ -253,36 +341,16 @@ var dartBlockActivityUserAnswerSchema = new Schema(
       },
     ],
   },
+  // "collection" and "timestamps" not necessary as they are inherited from the base Activity schema, just retained for clarity
   {
     collection: "activity_user_answers",
     discriminatorKey: "kind",
     timestamps: true,
   },
 );
-dartBlockActivityUserAnswerSchema.index(
-  { timestamp: 1, activity: 1, user: 1 },
-  { unique: true },
-);
-dartBlockActivityUserAnswerSchema.index(
-  { courseContext: 1 },
-  { unique: false },
-);
-dartBlockActivityUserAnswerSchema.index(
-  { scheduledQuiz: 1, user: 1 },
-  { unique: false },
-);
-dartBlockActivityUserAnswerSchema.index(
-  { playContextId: 1, user: 1 },
-  { unique: false },
-);
-var dartBlockActivityUserAnswerDiscriminator =
-  activityUserAnswerModel.discriminator(
+
+export const DartBlockActivityUserAnswerModel: Model<DartBlockActivityUserAnswerDocument> =
+  ActivityUserAnswerModel.discriminator<DartBlockActivityUserAnswerDocument>(
     "DartBlockActivityUserAnswer",
     dartBlockActivityUserAnswerSchema,
   );
-
-module.exports.base = activityUserAnswerModel;
-module.exports.ChoiceActivityUserAnswer = choiceActivityUserAnswerDiscriminator;
-module.exports.RecallActivityUserAnswer = recallActivityUserAnswerDiscriminator;
-module.exports.DartBlockActivityUserAnswer =
-  dartBlockActivityUserAnswerDiscriminator;

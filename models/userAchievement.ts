@@ -1,5 +1,15 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
+import mongoose, { Schema, HydratedDocument, Model, Types } from "mongoose";
+
+export interface UserAchievement {
+  achievement: Types.ObjectId;
+  user: Types.ObjectId;
+  criteriaProgress: Map<string, number>;
+  unlockedAt?: Date;
+  requiresUpload?: boolean;
+}
+
+export type UserAchievementDocument = HydratedDocument<UserAchievement>;
+
 var userAchievementSchema = new Schema(
   {
     achievement: {
@@ -29,9 +39,11 @@ var userAchievementSchema = new Schema(
   { collection: "user_achievements", timestamps: true },
 );
 userAchievementSchema.index({ achievement: 1, user: 1 }, { unique: true });
-var userAchievementModel = mongoose.model(
-  "UserAchievement",
-  userAchievementSchema,
-);
 
-module.exports = userAchievementModel;
+const UserAchievementModel: Model<UserAchievementDocument> =
+  mongoose.model<UserAchievementDocument>(
+    "UserAchievement",
+    userAchievementSchema,
+  );
+
+export { userAchievementSchema as schema, UserAchievementModel as model };

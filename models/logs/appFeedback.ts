@@ -1,6 +1,21 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var appFeedbackSchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model } from "mongoose";
+
+export interface AppFeedback {
+  user?: mongoose.Types.ObjectId;
+  isAnonymous: boolean;
+  message: string;
+  appFeedbackType: string;
+  includeLogFile: boolean;
+  devicePlatform: string;
+  appVersion: string;
+  appBuildNumber: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type AppFeedbackDocument = HydratedDocument<AppFeedback>;
+
+const appFeedbackSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -38,6 +53,6 @@ var appFeedbackSchema = new Schema(
   },
   { collection: "app_feedback", timestamps: true },
 );
-var appFeedbackSchemaModel = mongoose.model("AppFeedback", appFeedbackSchema);
 
-module.exports = appFeedbackSchemaModel;
+export const AppFeedbackModel: Model<AppFeedbackDocument> =
+  mongoose.model<AppFeedbackDocument>("AppFeedback", appFeedbackSchema);

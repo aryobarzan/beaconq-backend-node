@@ -48,13 +48,12 @@ const userSchema = new Schema(
     secretQuestions: {
       type: [secretQuestionSchema],
       validate: {
-        validator: function (v: any) {
+        validator: function (v: SecretQuestion[] | null | undefined) {
           // allow undefined/null, but if provided ensure length < 4
           if (!v) return true;
           return Array.isArray(v) ? v.length <= 4 : false;
         },
-        message: () =>
-          `You cannot set more than 4 secret questions for your account.`,
+        message: `You cannot set more than 4 secret questions for your account.`,
       },
     },
     date: {
@@ -68,17 +67,20 @@ const userSchema = new Schema(
 
 userSchema.method(
   "comparePassword",
-  async function comparePassword(this: UserDocument, passw: string) {
-    return bcrypt.compare(passw, this.password);
+  async function comparePassword(this: UserDocument, password: string) {
+    return bcrypt.compare(password, this.password);
   },
 );
 
 userSchema.pre("save", async function (this: UserDocument) {
   if (!this.isModified("password") && !this.isNew) return;
-  const hash = await bcrypt.hash(this.password, 10);
+  const BCRYPT_ROUNDS = 10;
+  const hash = await bcrypt.hash(this.password, BCRYPT_ROUNDS);
   this.password = hash;
 });
 
-// When creating the model, annotate it so queries return the typed document
-export const UserModel = mongoose.model<UserDocument>("User", userSchema);
+export const UserModel: Model<UserDocument> = mongoose.model<UserDocument>(
+  "User",
+  userSchema,
+);
 export default UserModel;

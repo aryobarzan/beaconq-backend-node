@@ -1,6 +1,18 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var userPatronProfileSchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
+
+export interface UserPatronProfile {
+  user: Types.ObjectId;
+  course?: Types.ObjectId;
+  patronStandings: Map<string, number>;
+  activePatron: string;
+  activePatronLastChanged?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type UserPatronProfileDocument = HydratedDocument<UserPatronProfile>;
+
+const userPatronProfileSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -16,6 +28,8 @@ var userPatronProfileSchema = new Schema(
       type: Map,
       required: true,
       of: Number,
+      // Use a factory so each document gets its own Map instance
+      default: () => new Map<string, number>(),
     },
     activePatron: {
       type: String,
@@ -39,9 +53,9 @@ userPatronProfileSchema.virtual("userDetails", {
   justOne: true,
 });
 userPatronProfileSchema.index({ user: 1, course: 1 }, { unique: true });
-var userPatronProfileModel = mongoose.model(
-  "UserPatronProfile",
-  userPatronProfileSchema,
-);
 
-module.exports = userPatronProfileModel;
+export const UserPatronProfileModel: Model<UserPatronProfileDocument> =
+  mongoose.model<UserPatronProfileDocument>(
+    "UserPatronProfile",
+    userPatronProfileSchema,
+  );

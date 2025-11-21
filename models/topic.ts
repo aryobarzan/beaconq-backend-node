@@ -14,7 +14,7 @@ export interface Topic {
   updatedAt?: Date;
 }
 
-type TopicDocument = HydratedDocument<Topic>;
+export type TopicDocument = HydratedDocument<Topic>;
 
 const topicSchema = new Schema(
   {

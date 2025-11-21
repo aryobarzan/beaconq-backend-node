@@ -1,6 +1,20 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var ebisuSchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
+// DEPRECATED: replaced by fsrsModel.ts
+export interface Ebisu {
+  time: number;
+  alpha: number;
+  beta: number;
+  dataType: "activity" | "topic";
+  dataId: string;
+  user: Types.ObjectId;
+  version: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type EbisuDocument = HydratedDocument<Ebisu>;
+
+const ebisuSchema = new Schema(
   {
     time: {
       type: Number,
@@ -44,8 +58,10 @@ var ebisuSchema = new Schema(
       },
     },
   },
-  { collection: "ebisu_models", timestamps: true }
+  { collection: "ebisu_models", timestamps: true },
 );
-// TODO: custom index?
 
-module.exports = mongoose.model("EbisuModel", ebisuSchema);
+export const EbisuModel: Model<EbisuDocument> = mongoose.model<EbisuDocument>(
+  "EbisuModel",
+  ebisuSchema,
+);

@@ -1,6 +1,36 @@
-var mongoose = require("mongoose");
-var Schema = mongoose.Schema;
-var playContextSchema = new Schema(
+import mongoose, { HydratedDocument, Schema, Model, Types } from "mongoose";
+
+export interface PlayContext {
+  contextId: string;
+  user: Types.ObjectId;
+  playType:
+    | "trialQuiz"
+    | "scheduledQuiz"
+    | "review"
+    | "challengeReview"
+    | "test"
+    | "unlock";
+  descriptor?: string;
+  activities: Types.ObjectId[];
+  topics?: Types.ObjectId[];
+  course?: Types.ObjectId;
+  courseSessions?: Types.ObjectId[];
+  scheduledQuiz?: Types.ObjectId;
+  logAnswers: boolean;
+  logActivityUserInteractions: boolean;
+  logActivityFeedbackViews: boolean;
+  additionalActivities: Types.ObjectId[];
+  reviewOptions?: Map<string, any>; // added in 5.0.0
+  patron?: string; // added in 5.0.0
+  userSelfPredictedPerformance?: number; // added in 6.0.0
+  userEstimatedRetrievability?: number; // added in 6.0.0
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type PlayContextDocument = HydratedDocument<PlayContext>;
+
+const playContextSchema = new Schema(
   {
     contextId: {
       type: String,
@@ -11,7 +41,7 @@ var playContextSchema = new Schema(
       ref: "User",
       required: true,
     },
-    /// "Unlock" introduced with BEACON Q 2.3.0: used when the user missed playing a scheduled quiz and instead unlocks the activities later
+    // "Unlock" introduced with BEACON Q 2.3.0: used when the user missed playing a scheduled quiz and instead unlocks the activities later
     playType: {
       type: String,
       enum: [
@@ -28,7 +58,7 @@ var playContextSchema = new Schema(
       type: String,
       required: false,
     },
-    /// The activities part of the play context, but not necessarily all played
+    // The activities part of the play context, but not necessarily all were played by the user.
     activities: [
       {
         type: Schema.Types.ObjectId,
@@ -58,7 +88,7 @@ var playContextSchema = new Schema(
       type: Schema.Types.ObjectId,
       required: false,
     },
-    ///
+    //
     logAnswers: {
       type: Boolean,
       required: true,
@@ -112,6 +142,6 @@ playContextSchema.index(
   { unique: false },
 );
 playContextSchema.index({ user: 1, course: 1, playType: 1 }, { unique: false });
-var playContextModel = mongoose.model("PlayContext", playContextSchema);
 
-module.exports = playContextModel;
+export const PlayContextModel: Model<PlayContextDocument> =
+  mongoose.model<PlayContextDocument>("PlayContext", playContextSchema);
