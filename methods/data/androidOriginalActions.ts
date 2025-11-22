@@ -1,6 +1,8 @@
-var functions = {
-  getLatestAndroidVersionDetails: function (_, res) {
-    res.status(201).send({ message: "No new Android version details." });
+import { Request, Response } from "express";
+
+const functions = {
+  getLatestAndroidVersionDetails: function (_: Request, res: Response) {
+    return res.status(201).send({ message: "No new Android version details." });
     // res.status(200).send({
     //   announcement: {
     //     title: "We Need You!",
@@ -29,7 +31,7 @@ var functions = {
     //   },
     // });
   },
-  //   getLatestAndroidAPKDetails: function (_, res) {
+  //   getLatestAndroidAPKDetails: function (_: Request, res: Response) {
   //     res.status(200).send({
   //       versionCode: 71,
   //       versionNumber: "6.1.0",
@@ -39,7 +41,7 @@ var functions = {
   //       apkURL: "",
   //     });
   //   },
-  //   getNewPlayStoreListingDetails: function (_, res) {
+  //   getNewPlayStoreListingDetails: function (_: Request, res: Response) {
   //     res.status(200).send({
   //       versionCode: 71,
   //       versionNumber: "6.1.0",
@@ -53,4 +55,4 @@ var functions = {
   //   },
 };
 
-module.exports = functions;
+export default functions;

@@ -78,7 +78,9 @@ var functions = {
           if (!populatedQuiz) {
             throw new Error("Failed to populate activities for created quiz");
           }
-          result = populatedQuiz;
+          // populateQuiz returns QuizDocument | QuizDocument[]
+          // since a single quiz was passed, it returns a single quiz
+          result = populatedQuiz as QuizDocument;
         } else {
           // Update existing quiz
 
@@ -114,7 +116,9 @@ var functions = {
           if (!populatedQuiz) {
             throw new Error("Failed to populate activities for updated quiz");
           }
-          result = populatedQuiz;
+          // populateQuiz returns QuizDocument | QuizDocument[]
+          // since a single quiz was passed, it returns a single quiz
+          result = populatedQuiz as QuizDocument;
         }
       });
       // Creation or update of quiz was successful.

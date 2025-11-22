@@ -1,9 +1,9 @@
-const process = require("process");
-const pino = require("pino");
-const rfs = require("rotating-file-stream");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+import process from "process";
+import pino from "pino";
+import rfs from "rotating-file-stream";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -24,23 +24,23 @@ try {
 }
 
 // create rotating stream. If it fails, we fallback to stdout.
-let stream;
+let stream: rfs.RotatingFileStream | null;
 try {
   stream = rfs.createStream(LOG_FILENAME, {
-    size: ROTATE_SIZE,
-    interval: ROTATE_INTERVAL,
+    size: ROTATE_SIZE as `${number}${'K' | 'M' | 'G' | 'B'}`,
+    interval: ROTATE_INTERVAL as `${number}${'s' | 'm' | 'h' | 'd'}`,
     path: LOG_DIR,
     compress: ROTATE_COMPRESS,
-    maxFiles: ROTATE_MAX_FILES,
+    maxFiles: Number(ROTATE_MAX_FILES),
   });
   // listen for stream errors and fall back if needed
-  stream.on("error", (err) => {
+  stream.on("error", (err: Error) => {
     console.error(
       "request_logger rotating stream error, switching to stdout",
       err,
     );
   });
-} catch (err) {
+} catch (err: unknown) {
   console.error(
     "Failed to create rotating log stream, falling back to stdout",
     err,
@@ -50,7 +50,7 @@ try {
 
 // Configure pino options
 
-const pinoOptions = {
+const pinoOptions: pino.LoggerOptions = {
   level: LOG_LEVEL,
   redact: process.env.PINO_REDACT
     ? process.env.PINO_REDACT.split(",")
@@ -60,18 +60,18 @@ const pinoOptions = {
 
 // In development, pretty print (human-readable).
 // In production, use JSON.
-let logger;
+let logger: pino.Logger;
 if (!isProd) {
   // Fallback: create a logger that writes to stdout
   const pretty = pino.transport
     ? pino.transport({
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "SYS:standard",
-          ignore: "pid,hostname",
-        },
-      })
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        translateTime: "SYS:standard",
+        ignore: "pid,hostname",
+      },
+    })
     : undefined;
 
   if (pretty) {
@@ -90,9 +90,9 @@ if (!isProd) {
 }
 
 // pino-http middleware to attach req/res info and measure latency
-const pinoHttp = require("pino-http");
+import { HttpLogger, pinoHttp } from "pino-http";
 
-function expressLoggerFactory() {
+function expressLoggerFactory(): HttpLogger {
   return pinoHttp({
     logger,
     customLogLevel: function (res, err) {
@@ -103,20 +103,26 @@ function expressLoggerFactory() {
   });
 }
 
-function shutdownAndFlush() {
-  return new Promise((resolve) => {
+function shutdownAndFlush(): Promise<void> {
+  return new Promise<void>((resolve) => {
     try {
-      const finalHandler = pino.final(logger, (err, finalLogger) => {
-        if (err) finalLogger.error(err, "Error at shutdown");
-        finalLogger.info("Logger flushed and shutting down");
-      });
+      logger.info("Request logger shutting down, flushing logs...");
 
-      finalHandler(null, () => {
-        // final flush complete
+      // ensure all logs still in the buffer are written
+      logger.flush();
+
+      // close the rotating file stream
+      if (stream) {
+        stream.end(() => {
+          logger.info("Request logger flushed and rotating file stream closed");
+          resolve();
+        });
+      } else {
+        logger.info("Request logger flushed");
         resolve();
-      });
-    } catch (err) {
-      console.error("Error flushing logger at shutdown", err);
+      }
+    } catch (err: unknown) {
+      console.error("Error flushing request logger at shutdown", err);
       resolve();
     }
   });

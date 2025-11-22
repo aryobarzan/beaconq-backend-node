@@ -14,6 +14,8 @@ import { model as UserAchievementModel, UserAchievementDocument } from "../model
 import mongoose from "mongoose";
 import logger from "./logger";
 
+
+
 const functions = {
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
   populateCourse: async function (course: CourseDocument | CourseDocument[]): Promise<CourseDocument> {
@@ -41,8 +43,7 @@ const functions = {
   },
 
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
-  populateQuiz: async function (quiz: QuizDocument | QuizDocument[]): Promise<QuizDocument> {
-    // [{ path: "activities", model: "Activity" }, { path: "activities", model: "ChoiceActivity" }, { path: "activities", model: "RecallActivity" }]
+  populateQuiz: async function (quiz: QuizDocument | QuizDocument[]): Promise<QuizDocument | QuizDocument[]> {
     return QuizModel.populate(quiz, [
       {
         path: "activities",

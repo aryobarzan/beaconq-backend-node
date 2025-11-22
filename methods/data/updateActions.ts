@@ -1,56 +1,56 @@
-var Course = require("../../models/course");
-const ModelHelper = require("../../middleware/modelHelper");
-const Quiz = require("../../models/quiz");
-const Activity = require("../../models/activity");
-const Topic = require("../../models/topic");
-const logger = require("../../middleware/logger");
-var mongoose = require("mongoose");
+import { CourseDocument, CourseModel } from "../../models/course";
+import ModelHelper from "../../middleware/modelHelper";
+import { QuizDocument, QuizModel } from "../../models/quiz";
+import { ActivityDocument, ActivityModel } from "../../models/activity";
+import { TopicDocument, TopicModel } from "../../models/topic";
+import logger from "../../middleware/logger";
+import mongoose from "mongoose";
+import { Request, Response } from "express";
 
 // Possible status codes
-const CheckForUpdatesStatus = Object.freeze({
-  UpdatesAvailable: 200,
-  UpToDate: 209,
-  MissingArguments: 400,
-  CoursesNotFound: 452,
-  InternalError: 500,
-});
+enum CheckForUpdatesStatus {
+  UpdatesAvailable = 200,
+  UpToDate = 209,
+  MissingArguments = 400,
+  CoursesNotFound = 452,
+  InternalError = 500,
+}
 
-const CheckForQuizUpdatesStatus = Object.freeze({
-  UpdatesAvailable: 200,
-  UpToDate: 209,
-  MissingArguments: 400,
-  QuizzesNotFound: 452,
-  InternalError: 500,
-});
+enum CheckForQuizUpdatesStatus {
+  UpdatesAvailable = 200,
+  UpToDate = 209,
+  MissingArguments = 400,
+  QuizzesNotFound = 452,
+  InternalError = 500,
+}
 
-const CheckForActivityUpdatesStatus = Object.freeze({
-  UpdatesAvailable: 200,
-  UpToDate: 209,
-  MissingArguments: 400,
-  ActivitiesNotFound: 452,
-  InternalError: 500,
-});
+enum CheckForActivityUpdatesStatus {
+  UpdatesAvailable = 200,
+  UpToDate = 209,
+  MissingArguments = 400,
+  ActivitiesNotFound = 452,
+  InternalError = 500,
+}
 
-const CheckForTopicUpdatesStatus = Object.freeze({
-  UpdatesAvailable: 200,
-  UpToDate: 209,
-  MissingArguments: 400,
-  TopicsNotFound: 452,
-  InternalError: 500,
-});
-// Possible status codes
+enum CheckForTopicUpdatesStatus {
+  UpdatesAvailable = 200,
+  UpToDate = 209,
+  MissingArguments = 400,
+  TopicsNotFound = 452,
+  InternalError = 500,
+}
 
-var functions = {
-  checkForCourseUpdates: async function (req, res) {
+const functions = {
+  checkForCourseUpdates: async function (req: Request<{}, {}, { courses: string }>, res: Response) {
     if (!req.body.courses) {
       return res
         .status(CheckForUpdatesStatus.MissingArguments)
         .send({ message: "Can't check for updates: specify courses." });
     }
-    let usersCourses;
+    let usersCourses: { id: string; version: string }[];
     try {
       usersCourses = JSON.parse(req.body.courses);
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(CheckForUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify courses (invalid ids).",
       });
@@ -62,15 +62,15 @@ var functions = {
       });
     }
 
-    const clientVersionById = new Map();
-    const courseObjectIds = [];
+    const clientVersionById = new Map<string, number>();
+    const courseObjectIds: mongoose.Types.ObjectId[] = [];
     for (const uc of usersCourses) {
       const id = uc.id;
       const v = Number.parseInt(uc.version, 10);
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      courseObjectIds.push(mongoose.Types.ObjectId(id));
+      courseObjectIds.push(new mongoose.Types.ObjectId(id));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 
@@ -81,7 +81,7 @@ var functions = {
     }
 
     try {
-      const courses = await Course.find({
+      const courses = await CourseModel.find({
         _id: { $in: courseObjectIds },
       }).exec();
       if (!courses || courses.length === 0) {
@@ -89,7 +89,7 @@ var functions = {
           message: "Can't check for updates: courses could not be found.",
         });
       }
-      const coursesToUpdate = [];
+      const coursesToUpdate: CourseDocument[] = [];
       for (const course of courses) {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(course._id))) continue;
@@ -117,24 +117,24 @@ var functions = {
         // TODO: toJSON?
         courses: JSON.parse(JSON.stringify(populatedCourses)),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(CheckForUpdatesStatus.InternalError).send({
         message: "Can't check for updates: internal error.",
       });
     }
   },
-  checkForQuizUpdates: async function (req, res) {
+  checkForQuizUpdates: async function (req: Request<{}, {}, { quizzes: string }>, res: Response) {
     if (!req.body.quizzes) {
       return res
         .status(CheckForQuizUpdatesStatus.MissingArguments)
         .send({ message: "Can't check for updates: specify quizzes." });
     }
 
-    let usersQuizzes;
+    let usersQuizzes: { id: string; version: string }[];
     try {
       usersQuizzes = JSON.parse(req.body.quizzes);
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(CheckForQuizUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify quizzes (invalid ids).",
       });
@@ -146,15 +146,15 @@ var functions = {
       });
     }
 
-    const clientVersionById = new Map();
-    const quizObjectIds = [];
+    const clientVersionById = new Map<string, number>();
+    const quizObjectIds: mongoose.Types.ObjectId[] = [];
     for (const uq of usersQuizzes) {
       const id = uq.id;
       const v = Number.parseInt(uq.version, 10);
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      quizObjectIds.push(mongoose.Types.ObjectId(id));
+      quizObjectIds.push(new mongoose.Types.ObjectId(id));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 
@@ -165,14 +165,14 @@ var functions = {
     }
 
     try {
-      const quizzes = await Quiz.find({ _id: { $in: quizObjectIds } }).exec();
+      const quizzes = await QuizModel.find({ _id: { $in: quizObjectIds } }).exec();
       if (!quizzes || quizzes.length === 0) {
         return res.status(CheckForQuizUpdatesStatus.QuizzesNotFound).send({
           message: "Can't check for updates: quizzes could not be found.",
         });
       }
 
-      const quizzesToUpdate = [];
+      const quizzesToUpdate: QuizDocument[] = [];
       for (const quiz of quizzes) {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(quiz._id))) continue;
@@ -195,26 +195,26 @@ var functions = {
       }
       return res.status(CheckForQuizUpdatesStatus.UpdatesAvailable).send({
         message: "Updates are available.",
-        quizzes: populatedQuizzes.map((q) => q.toJSON()),
+        quizzes: Array.isArray(populatedQuizzes) ? populatedQuizzes.map((q) => q.toJSON()) : [populatedQuizzes.toJSON()],
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(CheckForQuizUpdatesStatus.InternalError).send({
         message: "Can't check for updates: internal error.",
       });
     }
   },
-  checkForActivityUpdates: async function (req, res) {
+  checkForActivityUpdates: async function (req: Request<{}, {}, { activities: string }>, res: Response) {
     if (!req.body.activities) {
       return res
         .status(CheckForActivityUpdatesStatus.MissingArguments)
         .send({ message: "Can't check for updates: specify activities." });
     }
 
-    let usersActivities;
+    let usersActivities: { id: string; version: string }[];
     try {
       usersActivities = JSON.parse(req.body.activities);
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(CheckForActivityUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify activities (invalid ids).",
       });
@@ -226,15 +226,15 @@ var functions = {
       });
     }
 
-    const clientVersionById = new Map();
-    const activityObjectIds = [];
+    const clientVersionById = new Map<string, number>();
+    const activityObjectIds: mongoose.Types.ObjectId[] = [];
     for (const ua of usersActivities) {
       const id = ua.id;
       const v = Number.parseInt(ua.version, 10);
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      activityObjectIds.push(mongoose.Types.ObjectId(id));
+      activityObjectIds.push(new mongoose.Types.ObjectId(id));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 
@@ -245,7 +245,7 @@ var functions = {
     }
 
     try {
-      const activities = await Activity.BaseActivity.find({
+      const activities = await ActivityModel.find({
         _id: { $in: activityObjectIds },
       })
         .populate("topics")
@@ -257,7 +257,7 @@ var functions = {
             message: "Can't check for updates: activities could not be found.",
           });
       }
-      const activitiesToUpdate = [];
+      const activitiesToUpdate: ActivityDocument[] = [];
       for (const activity of activities) {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(activity._id))) continue;
@@ -274,26 +274,26 @@ var functions = {
 
       return res.status(CheckForActivityUpdatesStatus.UpdatesAvailable).send({
         message: "Updates are available.",
-        activities: activitiesToUpdate,
+        activities: activitiesToUpdate.map((a) => a.toJSON()),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(CheckForActivityUpdatesStatus.InternalError).send({
         message: "Can't check for updates: internal error.",
       });
     }
   },
-  checkForTopicUpdates: async function (req, res) {
+  checkForTopicUpdates: async function (req: Request<{}, {}, { topics: string }>, res: Response) {
     if (!req.body.topics) {
       return res
         .status(CheckForTopicUpdatesStatus.MissingArguments)
         .send({ message: "Can't check for updates: specify topics." });
     }
 
-    let usersTopics;
+    let usersTopics: { id: string; version: string }[];
     try {
       usersTopics = JSON.parse(req.body.topics);
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(CheckForTopicUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify topics (invalid ids).",
       });
@@ -305,15 +305,15 @@ var functions = {
       });
     }
 
-    const clientVersionById = new Map();
-    const topicObjectIds = [];
+    const clientVersionById = new Map<string, number>();
+    const topicObjectIds: mongoose.Types.ObjectId[] = [];
     for (const ut of usersTopics) {
       const id = ut.id;
       const v = Number.parseInt(ut.version, 10);
       if (!id || !mongoose.isValidObjectId(id)) {
         continue;
       }
-      topicObjectIds.push(mongoose.Types.ObjectId(id));
+      topicObjectIds.push(new mongoose.Types.ObjectId(id));
       clientVersionById.set(String(id), Number.isFinite(v) ? v : 0);
     }
 
@@ -324,14 +324,14 @@ var functions = {
     }
 
     try {
-      const topics = await Topic.find({ _id: { $in: topicObjectIds } }).exec();
+      const topics = await TopicModel.find({ _id: { $in: topicObjectIds } }).exec();
       if (!topics || topics.length === 0) {
         return res.status(CheckForTopicUpdatesStatus.TopicsNotFound).send({
           message: "Can't check for updates: topics could not be found.",
         });
       }
 
-      const topicsToUpdate = [];
+      const topicsToUpdate: TopicDocument[] = [];
       for (const topic of topics) {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(topic._id))) continue;
@@ -347,9 +347,9 @@ var functions = {
       }
       return res.status(CheckForTopicUpdatesStatus.UpdatesAvailable).send({
         message: "Updates are available.",
-        topics: topicsToUpdate,
+        topics: topicsToUpdate.map((t) => t.toJSON()),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(CheckForTopicUpdatesStatus.InternalError).send({
         message: "Can't check for updates: internal error.",
@@ -358,4 +358,4 @@ var functions = {
   },
 };
 
-module.exports = functions;
+export default functions;
