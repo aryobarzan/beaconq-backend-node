@@ -106,7 +106,7 @@ const activitySchema = new Schema(
 // Improve populate() operation performance
 activitySchema.index({ topics: 1 }, { unique: false });
 
-const ActivityModel: Model<ActivityDocument> = mongoose.model<ActivityDocument>(
+export const ActivityModel: Model<ActivityDocument> = mongoose.model<ActivityDocument>(
   "Activity",
   activitySchema,
 );

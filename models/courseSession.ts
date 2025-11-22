@@ -6,6 +6,7 @@ import {
 } from "./beaconResource";
 
 export interface CourseSession {
+  _id: Types.ObjectId;
   title: string;
   topics: Types.ObjectId[];
   currentTopicIndex: number;

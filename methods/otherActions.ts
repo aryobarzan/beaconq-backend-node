@@ -1,27 +1,29 @@
-const logger = require("../middleware/logger");
-const process = require("process");
-const ModelHelper = require("../middleware/modelHelper");
-const AppFeedback = require("../models/logs/appFeedback");
-const fs = require("fs").promises;
-var path = require("path");
+import logger from "../middleware/logger";
+import process from "process";
+import ModelHelper from "../middleware/modelHelper";
+import AppFeedbackModel, { AppFeedback, AppFeedbackDocument } from "../models/logs/appFeedback";
+import fs from "fs";
+import path from "path";
+import { Request, Response } from "express";
+import mongoose from "mongoose";
 
-const LogAppFeedbackStatus = Object.freeze({
-  Logged: 200,
-  MissingArguments: 400,
-  InvalidAppFeedback: 452,
-  InternalError: 500,
-});
-const GetAppFeedbackStatus = Object.freeze({
-  Retrieved: 200,
-  InternalError: 500,
-});
+enum LogAppFeedbackStatus {
+  Logged = 200,
+  MissingArguments = 400,
+  InvalidAppFeedback = 452,
+  InternalError = 500,
+}
+enum GetAppFeedbackStatus {
+  Retrieved = 200,
+  InternalError = 500,
+}
 
-var functions = {
+const functions = {
   // DEPRECATED: now returns just an error for backward compatibility reasons with older client versions.
-  getFeedbackAPIDetails: function (_, res) {
+  getFeedbackAPIDetails: function (_: Request, res: Response) {
     return res.status(500).send();
   },
-  getOpenAIAPIDetails: function (req, res) {
+  getOpenAIAPIDetails: function (req: Request, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "You are not authorized to do this.",
@@ -35,19 +37,19 @@ var functions = {
       token: process.env.OPENAIAPI,
     });
   },
-  sendAppFeedback: async function (req, res) {
-    if (!req.files || req.files.length < 1) {
+  sendAppFeedback: async function (req: Request, res: Response) {
+    if (!req.files || !Array.isArray(req.files) || req.files.length < 1) {
       return res.status(LogAppFeedbackStatus.MissingArguments).send({
         message: "App Feedback logging failed: missing parameter(s).",
       });
     }
-    let appFeedback;
-    let logFileString;
+    let appFeedback: AppFeedbackDocument | null = null;
+    let logFileString: string | null = null;
     for (const file of req.files) {
       if (file["fieldname"] === "logFile") {
         logFileString = file["buffer"].toString();
       } else if (file["fieldname"] === "appFeedback") {
-        appFeedback = ModelHelper.decodeAppFeedback(JSON.parse(file["buffer"]));
+        appFeedback = ModelHelper.decodeAppFeedback(JSON.parse(file["buffer"].toString()));
       }
     }
     if (!appFeedback) {
@@ -55,8 +57,8 @@ var functions = {
         message: "App Feedback logging failed: could not be deserialized.",
       });
     }
-    if (req.token && req.token._id) {
-      appFeedback.user = req.token._id;
+    if (req.token && req.token._id && mongoose.isValidObjectId(req.token._id)) {
+      appFeedback.user = new mongoose.Types.ObjectId(req.token._id);
     }
     try {
       const savedFeedback = await appFeedback.save();
@@ -69,12 +71,12 @@ var functions = {
         global.appRoot,
         "data",
         "appFeedback",
-        savedFeedback._id + ".log",
+        savedFeedback._id.toString() + ".log",
       );
       // with log file
       if (logFileString && savedFeedback.includeLogFile) {
         try {
-          await fs.writeFile(logPath, logFileString);
+          await fs.promises.writeFile(logPath, logFileString);
           return res
             .status(LogAppFeedbackStatus.Logged)
             .send({ message: "App Feedback logged." });
@@ -97,15 +99,15 @@ var functions = {
       });
     }
   },
-  getAppFeedback: async function (req, res) {
+  getAppFeedback: async function (req: Request, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Cannot view app feedback: only teachers are authorized.",
       });
     }
     try {
-      const appFeedbacks = await AppFeedback.find()
-        .populate("user", "username role")
+      const appFeedbacks = await AppFeedbackModel.find()
+        .populate("user", "username role").lean()
         .exec();
       return res.status(GetAppFeedbackStatus.Retrieved).send({
         appFeedback: appFeedbacks,
@@ -120,4 +122,4 @@ var functions = {
   },
 };
 
-module.exports = functions;
+export default functions;

@@ -1,23 +1,41 @@
-var User = require("../models/user");
-const jwt = require("jsonwebtoken");
-var mongoose = require("mongoose");
-const logger = require("../middleware/logger");
-const permissionHelper = require("../middleware/permissionHelper");
+import { UserModel } from "../models/user";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import { Request, Response } from "express";
+import logger from "../middleware/logger";
+import permissionHelper from "../middleware/permissionHelper";
+import { validatePassword } from "./helperFunctions";
 
-const GetUsersStatus = Object.freeze({
-  Retrieved: 200,
-  InternalError: 500,
-});
-const ChangeUserPasswordStatus = Object.freeze({
-  Updated: 200,
-  MissingArguments: 400,
-  InvalidNewPassword: 452,
-  InvalidUser: 453,
-  InternalError: 500,
-});
+enum GetUsersStatus {
+  Retrieved = 200,
+  InternalError = 500,
+}
+enum ChangeUserPasswordStatus {
+  Updated = 200,
+  MissingArguments = 400,
+  InvalidNewPassword = 452,
+  InvalidUser = 453,
+  InternalError = 500,
+}
 
-var functions = {
-  authenticateAdmin: function (req, res) {
+class ChangePasswordUserNotFoundError extends Error {
+  constructor() {
+    super("User not found");
+    this.name = "ChangePasswordUserNotFoundError";
+    Object.setPrototypeOf(this, ChangePasswordUserNotFoundError.prototype);
+  }
+}
+
+class ChangePasswordSaveFailedError extends Error {
+  constructor() {
+    super("Failed to save user");
+    this.name = "ChangePasswordSaveFailedError";
+    Object.setPrototypeOf(this, ChangePasswordSaveFailedError.prototype);
+  }
+}
+
+const functions = {
+  authenticateAdmin: function (req: Request<{ adminPassword: string }>, res: Response) {
     if (
       !req.params.adminPassword ||
       !permissionHelper.isUserAdmin(req.token._id, req.params.adminPassword)
@@ -30,7 +48,7 @@ var functions = {
       message: "Authorized.",
     });
   },
-  getUsers: async function (req, res) {
+  getUsers: async function (req: Request<{ adminPassword: string }>, res: Response) {
     if (
       !req.params.adminPassword ||
       !permissionHelper.isUserAdmin(req.token._id, req.params.adminPassword)
@@ -41,7 +59,7 @@ var functions = {
     }
     try {
       // Limit number of users returned to avoid high memory usage
-      let users = await User.find({}, "username createdAt updatedAt role _id")
+      const users = await UserModel.find({}, "username createdAt updatedAt role _id")
         .limit(1000)
         .lean()
         .exec();
@@ -52,8 +70,7 @@ var functions = {
       }
       return res.status(GetUsersStatus.Retrieved).send({
         message: "Users retrieved.",
-        // TODO: check if JSON.parse(JSON.stringify) is necessary now that lean() is applied (plain JS objects)
-        users: JSON.parse(JSON.stringify(users)),
+        users: users,
       });
     } catch (err) {
       logger.error(err);
@@ -62,7 +79,7 @@ var functions = {
       });
     }
   },
-  changeUserPassword: async function (req, res) {
+  changeUserPassword: async function (req: Request<{}, {}, { adminPassword: string; userId: string; newPassword: string }>, res: Response) {
     if (
       !req.body.adminPassword ||
       !permissionHelper.isUserAdmin(req.token._id, req.body.adminPassword)
@@ -83,24 +100,21 @@ var functions = {
         message: "Password change failed: invalid user. (ERR1)",
       });
     }
-    const userId = mongoose.Types.ObjectId(req.body.userId);
+    const userId = new mongoose.Types.ObjectId(req.body.userId);
 
     const newPassword = String(req.body.newPassword);
-    const allowedPatternRegex = /^[0-9A-Za-z_?!+\-]+$/;
-    // Enforce allowed characters: digits, ASCII letters, underscore, ?, !, +, and hyphen (-)
-    if (newPassword.length < 8 || !allowedPatternRegex.test(newPassword)) {
+    const isNewPasswordValid = validatePassword(newPassword)
+    if (!isNewPasswordValid) {
       return res.status(ChangeUserPasswordStatus.InvalidNewPassword).send({
         message: "New password does not conform to the requirements.",
       });
     }
 
-    let session;
+    let session: mongoose.ClientSession
     try {
       session = await mongoose.startSession();
-    } catch (err) {
-      logger.error("Could not start mongo session for changeUserPassword", {
-        err,
-      });
+    } catch (err: unknown) {
+      logger.error(`Could not start mongo session for changeUserPassword: ${err}`);
       return res.status(ChangeUserPasswordStatus.InternalError).send({
         message: "An error occurred while changing user password. (ERR4)",
       });
@@ -113,7 +127,7 @@ var functions = {
 
     try {
       await session.withTransaction(async () => {
-        const user = await User.findById(userId).session(session).exec();
+        const user = await UserModel.findById(userId).session(session).exec();
         if (!user) {
           responseToSend = {
             code: ChangeUserPasswordStatus.InvalidUser,
@@ -122,7 +136,7 @@ var functions = {
             },
           };
           // we throw an error so withTransaction aborts
-          throw new Error("UserNotFound");
+          throw new ChangePasswordUserNotFoundError();
         }
 
         user.password = newPassword;
@@ -134,7 +148,7 @@ var functions = {
               message: "An error occurred while changing user password. (ERR3)",
             },
           };
-          throw new Error("SaveFailed");
+          throw new ChangePasswordSaveFailedError();
         }
 
         responseToSend = {
@@ -144,8 +158,8 @@ var functions = {
       });
     } catch (err) {
       // unexpected error
-      if (err.message !== "UserNotFound" && err.message !== "SaveFailed") {
-        logger.error("changeUserPassword transaction failed", { err });
+      if (!(err instanceof ChangePasswordUserNotFoundError) && !(err instanceof ChangePasswordSaveFailedError)) {
+        logger.error(`changeUserPassword transaction failed: ${err}`);
         responseToSend = {
           code: ChangeUserPasswordStatus.InternalError,
           payload: {
@@ -154,11 +168,11 @@ var functions = {
         };
       }
     } finally {
-      if (session) session.endSession();
+      session.endSession();
     }
 
     return res.status(responseToSend.code).send(responseToSend.payload);
   },
 };
 
-module.exports = functions;
+export default functions;

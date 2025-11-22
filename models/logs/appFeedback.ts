@@ -56,3 +56,5 @@ const appFeedbackSchema = new Schema(
 
 export const AppFeedbackModel: Model<AppFeedbackDocument> =
   mongoose.model<AppFeedbackDocument>("AppFeedback", appFeedbackSchema);
+
+export default AppFeedbackModel;

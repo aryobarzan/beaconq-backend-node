@@ -1,35 +1,10 @@
 const upload = require("../middleware/uploadImages");
 const process = require("process");
 const mongoose = require("mongoose");
-//const MongoClient = require("mongodb").MongoClient;
 const GridFSBucket = require("mongodb").GridFSBucket;
 const logger = require("../middleware/logger");
 const { mapMulterError } = require("../middleware/uploadErrorMapper");
 
-//const url = dbConfig.database;
-//const baseUrl = dbConfig.url + "images/";
-//const mongoClient = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
-// const uploadImages2 = (req, res) => {
-//   if (!req.files || req.files.length <= 0) {
-//     return res
-//       .status(400)
-//       .send({ message: "You must select at least 1 file." });
-//   }
-//   const fileStream = req.files.buffer; // Get the file buffer from memory
-//   const fileName = req.files.originalname;
-
-//   const uploadStream = bucket.openUploadStream(fileName);
-//   fileStream.pipe(uploadStream);
-
-//   uploadStream.on("finish", () => {
-//     res.status(200).send("File uploaded successfully!");
-//   });
-
-//   uploadStream.on("error", (err) => {
-//     console.error("Error uploading file:", err);
-//     res.status(500).send("Failed to upload file.");
-//   });
-// };
 const uploadImages = async (req, res) => {
   try {
     await upload.uploadFilesHandler(req, res);
@@ -108,31 +83,6 @@ const deleteImages = async (req, res) => {
     });
   }
 };
-// const getImageIdentifiers = async (req, res) => {
-//     try {
-//         //await mongoClient.connect();
-//         //const database = mongoClient.db(dbConfig.database);
-//         const images = mongoose.connection.db.collection(dbConfig.imageBucket + ".files");
-//         const cursor = images.find({});
-//         if ((await cursor.countDocuments()) === 0) {
-//             return res.status(500).send({
-//                 message: "No files found!",
-//             });
-//         }
-//         let fileInfos = [];
-//         await cursor.forEach((doc) => {
-//             fileInfos.push({
-//                 name: doc.filename,
-//                 url: baseUrl + doc.filename,
-//             });
-//         });
-//         return res.status(200).send(fileInfos);
-//     } catch (error) {
-//         return res.status(500).send({
-//             message: error.message,
-//         });
-//     }
-// };
 
 // Gallery Images
 const uploadGalleryImage = async (req, res) => {

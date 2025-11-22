@@ -6,6 +6,7 @@ import validateUserSecretQuestionAnswersSchema from "../middleware/jsonSchemaVal
 import mongoose from "mongoose";
 import { UserModel, UserDocument } from "../models/user";
 import { Request, Response } from "express";
+import { validatePassword } from "./helperFunctions";
 
 enum RegisterStatus {
   Registered = 200,
@@ -60,21 +61,6 @@ function generateTokenForUser(user: UserDocument): string {
     algorithm: "RS256",
     expiresIn: "5y",
   });
-}
-
-function validatePassword(password: string): {
-  valid: boolean;
-  error?: string;
-} {
-  // Enforce allowed characters: digits, ASCII letters, underscore, ?, !, +, and hyphen (-)
-  const allowedPatternRegex = /^[0-9A-Za-z_?!+\-]+$/;
-  if (password.length < 8 || !allowedPatternRegex.test(password)) {
-    return {
-      valid: false,
-      error: "Your new password does not conform to the requirements.",
-    };
-  }
-  return { valid: true };
 }
 
 async function authenticateUser(username: string, password: string) {
@@ -388,10 +374,10 @@ const functions = {
       });
     }
     const newPassword = req.body.newPassword;
-    const validation = validatePassword(newPassword);
-    if (!validation.valid) {
+    const isNewPasswordValid = validatePassword(newPassword);
+    if (!isNewPasswordValid) {
       return res.status(UpdatePasswordStatus.InvalidNewPassword).send({
-        message: validation.error,
+        message: "Your new password does not conform to the requirements.",
       });
     }
 
@@ -452,10 +438,10 @@ const functions = {
       });
     }
     const newPassword = req.body.newPassword;
-    const validation = validatePassword(newPassword);
-    if (!validation.valid) {
+    const isNewPasswordValid = validatePassword(newPassword);
+    if (!isNewPasswordValid) {
       return res.status(UpdatePasswordStatus.InvalidNewPassword).send({
-        message: validation.error,
+        message: "Your new password does not conform to the requirements.",
       });
     }
 

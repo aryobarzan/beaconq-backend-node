@@ -475,7 +475,6 @@ var functions = {
     try {
       const registeredCourses = await ModelHelper.getUserRegisteredCourses(
         req.token._id,
-        true,
       );
       if (!registeredCourses) {
         return res
