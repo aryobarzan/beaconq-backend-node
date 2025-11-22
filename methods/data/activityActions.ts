@@ -1,30 +1,39 @@
-const Activity = require("../../models/activity");
-const { Permission, hasPermissions } = require("../../models/permission");
-const ActivityArchive = require("../../models/archive/activityArchive");
-const ModelHelper = require("../../middleware/modelHelper");
-const mongoose = require("mongoose");
-const logger = require("../../middleware/logger");
+import { ActivityDocument, ActivityModel } from "../../models/activity";
+import { PermissionModel, hasPermissions } from "../../models/permission";
+import { ActivityArchiveModel } from "../../models/archive/activityArchive";
+import ModelHelper from "../../middleware/modelHelper";
+import mongoose from "mongoose";
+import logger from "../../middleware/logger";
+import { Request, Response } from "express";
 
-async function archiveActivity(activity, session) {
-  var activityArchive = new ActivityArchive({ activity: activity });
+async function archiveActivity(activity: ActivityDocument, session: mongoose.ClientSession) {
+  const activityArchive = new ActivityArchiveModel({ activity });
   return activityArchive.save({ session });
 }
 
-const CreateOrUpdateActivityStatus = Object.freeze({
-  Created: 200,
-  Updated: 209,
-  MissingArguments: 400,
-  InternalError: 500,
-});
+enum CreateOrUpdateActivityStatus {
+  Created = 200,
+  Updated = 209,
+  MissingArguments = 400,
+  InternalError = 500,
+}
 
-const GetActivitiesStatus = Object.freeze({
-  Retrieved: 200,
-  None: 209,
-  InternalError: 500,
-});
+enum GetActivitiesStatus {
+  Retrieved = 200,
+  None = 209,
+  InternalError = 500,
+}
+
+class CreateOrUpdateActivityPermissionError extends Error {
+  constructor() {
+    super("Lacking permission to update");
+    this.name = "CreateOrUpdateActivityPermissionError";
+    Object.setPrototypeOf(this, CreateOrUpdateActivityPermissionError.prototype);
+  }
+}
 
 var functions = {
-  createOrUpdateActivity: async function (req, res) {
+  createOrUpdateActivity: async function (req: Request<{}, {}, { activity: string }>, res: Response) {
     if (!req.body.activity) {
       return res.status(CreateOrUpdateActivityStatus.MissingArguments).send({
         message: "Activity creation failed: activity parameter missing.",
@@ -35,14 +44,14 @@ var functions = {
         message: "Activity creation failed: only teachers are authorized.",
       });
     }
-    var newActivity = ModelHelper.decodeActivity(JSON.parse(req.body.activity));
+    const newActivity = ModelHelper.decodeActivity(JSON.parse(req.body.activity));
     if (!newActivity) {
       return res.status(CreateOrUpdateActivityStatus.InternalError).send({
         message:
           "Activity creation failed: activity could not be deserialized.",
       });
     }
-    let session;
+    let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
     } catch (err) {
@@ -51,11 +60,11 @@ var functions = {
       });
     }
 
-    let result = null;
-    let responseStatusCode = CreateOrUpdateActivityStatus.Updated;
+    let result: ActivityDocument | null = null;
+    let responseStatusCode: number = CreateOrUpdateActivityStatus.Updated;
     try {
       await session.withTransaction(async () => {
-        const existingActivity = await Activity.BaseActivity.findById(
+        const existingActivity = await ActivityModel.findById(
           newActivity._id,
         )
           .session(session)
@@ -64,7 +73,7 @@ var functions = {
         if (!existingActivity) {
           responseStatusCode = CreateOrUpdateActivityStatus.Created;
           const savedActivity = await newActivity.save({ session });
-          await new Permission({
+          await new PermissionModel({
             user: req.token._id,
             resourceType: "ACTIVITY",
             resource: savedActivity.id,
@@ -81,7 +90,7 @@ var functions = {
         // Update existing activity
         else {
           // Does the teacher have permission to update the existing activity
-          const permission = await Permission.findOne({
+          const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingActivity._id,
             resourceType: "ACTIVITY",
@@ -94,9 +103,7 @@ var functions = {
             !Number.isInteger(permission.level) ||
             !hasPermissions(["write"], permission.level)
           ) {
-            const err = new Error("Lacking permission to update");
-            err.status = 403; // known status code for "forbidden"
-            throw err;
+            throw new CreateOrUpdateActivityPermissionError();
           }
 
           // Option '{ overwriteDiscriminatorKey: true }' is IMPORTANT!!!
@@ -104,7 +111,7 @@ var functions = {
           // as long as its discriminator key 'kind' is indicated in its updated version.
           // If omitted, updates will only reflect the updated base fields which is not the intended behavior.
           newActivity.version = existingActivity.version + 1;
-          const updatedActivity = await Activity.BaseActivity.findByIdAndUpdate(
+          const updatedActivity = await ActivityModel.findByIdAndUpdate(
             existingActivity._id,
             newActivity,
             { overwriteDiscriminatorKey: true, new: true, session },
@@ -133,26 +140,26 @@ var functions = {
           activity: result.toJSON(),
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      if (err && err.status && Number.isInteger(err.status)) {
-        return res.status(err.status).send({ message: err.message });
+      if (err instanceof CreateOrUpdateActivityPermissionError) {
+        return res.status(403).send({ message: err.message });
       }
       return res.status(CreateOrUpdateActivityStatus.InternalError).send({
         message: `Activity creation/update failed: internal error. (${err})`,
       });
     } finally {
-      if (session) session.endSession();
+      session.endSession();
     }
   },
-  getActivities: async function (req, res) {
+  getActivities: async function (req: Request, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Activity fetching failed: only teachers are authorized.",
       });
     }
     try {
-      const activities = await Activity.BaseActivity.aggregate([
+      const activities = await ActivityModel.aggregate([
         {
           $lookup: {
             from: "permissions",
@@ -167,7 +174,7 @@ var functions = {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
                 resourceType: "ACTIVITY",
-                user: mongoose.Types.ObjectId(req.token._id),
+                user: new mongoose.Types.ObjectId(req.token._id),
                 level: { $gte: 4 },
               },
             },
@@ -191,7 +198,7 @@ var functions = {
           activities: JSON.parse(JSON.stringify(populatedActivities)),
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetActivitiesStatus.InternalError).send({
         message: `Activity fetching failed: an error occurred. (${err})`,
@@ -200,4 +207,4 @@ var functions = {
   },
 };
 
-module.exports = functions;
+export default functions;

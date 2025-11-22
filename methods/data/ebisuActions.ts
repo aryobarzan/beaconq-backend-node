@@ -1,14 +1,10 @@
-const StoreEbisuModelsStatus = Object.freeze({
-  Stored: 200,
-  MissingArguments: 400,
-  InternalError: 500,
-});
+import { Request, Response } from "express"
 
-var functions = {
+const functions = {
   // DEPRECATED: Ebisu models have been superseded by FSRS models (see fsrsActions.js).
   // For backward-compatibility with older client versions, the old endpoint remains with a generic response.
-  storeEbisuModels: function (req, res) {
-    return res.status(StoreEbisuModelsStatus.Stored).send({
+  storeEbisuModels: function (_: Request, res: Response) {
+    return res.status(200).send({
       message: "Ebisu models stored or updated.",
       insertedCount: 0,
       updatedCount: 0,
@@ -16,4 +12,4 @@ var functions = {
   },
 };
 
-module.exports = functions;
+export default functions;

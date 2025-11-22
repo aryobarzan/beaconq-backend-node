@@ -1,86 +1,106 @@
-var Course = require("../../models/course");
-const { Permission, hasPermissions } = require("../../models/permission");
-var CourseRegistration = require("../../models/courseRegistration");
-var mongoose = require("mongoose");
-const ModelHelper = require("../../middleware/modelHelper");
-const logger = require("../../middleware/logger");
-const firebaseHelper = require("../../middleware/firebaseHelper");
+import logger from "../../middleware/logger";
+import { Request, Response } from "express";
+import { PermissionModel, hasPermissions } from "../../models/permission";
+import { CourseDocument, CourseModel } from "../../models/course";
+import { CourseRegistrationDocument, CourseRegistrationModel } from "../../models/courseRegistration";
+import ModelHelper from "../../middleware/modelHelper";
+import firebaseHelper from "../../middleware/firebaseHelper";
+import mongoose from "mongoose";
 
 // Possible status codes
-const CreateOrUpdateCourseStatus = Object.freeze({
-  Created: 200,
-  Updated: 209,
-  MissingArguments: 400,
-  InternalError: 500,
-});
-const GetCoursesStatus = Object.freeze({
-  Retrieved: 200,
-  None: 209,
-  InternalError: 500,
-});
-const RegisterCourseStatus = Object.freeze({
-  Registered: 200,
-  AlreadyRegistered: 209,
-  MissingArgument: 400,
-  InvalidAccessKey: 452,
-  LimitReached: 453,
-  InternalError: 500,
-});
-const UnregisterCourseStatus = Object.freeze({
-  Unregistered: 200,
-  NotRegistered: 209,
-  MissingArgument: 400,
-  InvalidCourseId: 452,
-  InternalError: 500,
-});
-const GetRegisteredCoursesStatus = Object.freeze({
-  Retrieved: 200,
-  None: 209,
-  InternalError: 500,
-});
-const GetRegisteredUsersStatus = Object.freeze({
-  Retrieved: 200,
-  None: 209,
-  MissingArgument: 400,
-  InternalError: 500,
-});
+enum CreateOrUpdateCourseStatus {
+  Created = 200,
+  Updated = 209,
+  MissingArguments = 400,
+  InternalError = 500,
+}
+enum GetCoursesStatus {
+  Retrieved = 200,
+  None = 209,
+  InternalError = 500,
+}
+enum RegisterCourseStatus {
+  Registered = 200,
+  AlreadyRegistered = 209,
+  MissingArgument = 400,
+  InvalidAccessKey = 452,
+  LimitReached = 453,
+  InternalError = 500,
+}
+enum UnregisterCourseStatus {
+  Unregistered = 200,
+  NotRegistered = 209,
+  MissingArgument = 400,
+  InvalidCourseId = 452,
+  InternalError = 500,
+}
+enum GetRegisteredCoursesStatus {
+  Retrieved = 200,
+  None = 209,
+  InternalError = 500,
+}
+enum GetRegisteredUsersStatus {
+  Retrieved = 200,
+  None = 209,
+  MissingArgument = 400,
+  InternalError = 500,
+}
 // Possible status codes
 
-var functions = {
-  createOrUpdateCourse: async function (req, res) {
-    if (!req.body.course) {
-      return res
-        .status(CreateOrUpdateCourseStatus.MissingArguments)
-        .send({ message: "Course creation failed: course parameter missing." });
-    }
+class CourseRegistrationLimitReachedError extends Error {
+  constructor() {
+    super("Course registration limit reached");
+    this.name = "CourseRegistrationLimitReachedError";
+    Object.setPrototypeOf(this, CourseRegistrationLimitReachedError.prototype);
+  }
+}
+
+class CreateOrUpdateCoursePermissionError extends Error {
+  constructor() {
+    super("Lacking permission to update");
+    this.name = "CreateOrUpdateCoursePermissionError";
+    Object.setPrototypeOf(this, CreateOrUpdateCoursePermissionError.prototype);
+  }
+}
+
+const functions = {
+  createOrUpdateCourse: async function (req: Request<{}, {}, { course: string }>, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Course creation failed: only teachers are authorized.",
       });
     }
+    if (!req.body.course) {
+      return res
+        .status(CreateOrUpdateCourseStatus.MissingArguments)
+        .send({ message: "Course creation failed: course parameter missing." });
+    }
 
-    const newCourse = new Course(JSON.parse(req.body.course));
-    if (!newCourse) {
+    let newCourse: CourseDocument;
+    try {
+      newCourse = new CourseModel(JSON.parse(req.body.course));
+    } catch (err: unknown) {
       return res.status(CreateOrUpdateCourseStatus.InternalError).send({
         message: "Course creation failed: course could not be deserialized.",
       });
     }
 
-    let session;
+
+    let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(CreateOrUpdateCourseStatus.InternalError).send({
         message: `Course creation/update failed: internal error (session). (${err})`,
       });
     }
 
-    let responseStatusCode = CreateOrUpdateCourseStatus.Updated;
-    let result;
+    let responseStatusCode: number = CreateOrUpdateCourseStatus.Updated;
+    let result: CourseDocument | null = null;
 
     try {
       await session.withTransaction(async () => {
-        const existingCourse = await Course.findById(newCourse._id)
+        const existingCourse = await CourseModel.findById(newCourse._id)
           .session(session)
           .exec();
 
@@ -88,7 +108,7 @@ var functions = {
           // New course
           responseStatusCode = CreateOrUpdateCourseStatus.Created;
           const savedCourse = await newCourse.save({ session });
-          await new Permission({
+          await new PermissionModel({
             user: req.token._id,
             resourceType: "COURSE",
             resource: savedCourse._id,
@@ -106,7 +126,7 @@ var functions = {
         // update existing course
         else {
           // Does the teacher have permission to update the existing activity
-          const permission = await Permission.findOne({
+          const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingCourse._id,
             resourceType: "COURSE",
@@ -119,13 +139,11 @@ var functions = {
             !Number.isInteger(permission.level) ||
             !hasPermissions(["write"], permission.level)
           ) {
-            const err = new Error("Lacking permission to update");
-            err.status = 403; // known status code for "forbidden"
-            throw err;
+            throw new CreateOrUpdateCoursePermissionError();
           }
 
           newCourse.version = existingCourse.version + 1;
-          const updatedCourse = await Course.findByIdAndUpdate(
+          const updatedCourse = await CourseModel.findByIdAndUpdate(
             existingCourse._id,
             newCourse,
             { new: true, session },
@@ -158,26 +176,26 @@ var functions = {
           course: result.toJSON(),
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      if (err && err.status && Number.isInteger(err.status)) {
-        return res.status(err.status).send({ message: err.message });
+      if (err instanceof CreateOrUpdateCoursePermissionError) {
+        return res.status(403).send({ message: err.message });
       }
       return res.status(CreateOrUpdateCourseStatus.InternalError).send({
         message: `Course creation/update failed: internal error. (${err})`,
       });
     } finally {
-      if (session) session.endSession();
+      session.endSession();
     }
   },
-  getCourses: async function (req, res) {
+  getCourses: async function (req: Request, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Course fetching failed: only teachers are authorized.",
       });
     }
     try {
-      const courses = await Course.aggregate([
+      const courses = await CourseModel.aggregate([
         {
           $lookup: {
             from: "permissions",
@@ -192,7 +210,7 @@ var functions = {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
                 resourceType: "COURSE",
-                user: mongoose.Types.ObjectId(req.token._id),
+                user: new mongoose.Types.ObjectId(req.token._id),
                 level: { $gte: 4 },
               },
             },
@@ -215,7 +233,7 @@ var functions = {
       return res.status(GetCoursesStatus.Retrieved).send({
         courses: JSON.parse(JSON.stringify(populatedCourses)),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetCoursesStatus.InternalError).send({
         message:
@@ -225,7 +243,7 @@ var functions = {
   },
 
   // User (Student) actions
-  registerToCourse: async function (req, res) {
+  registerToCourse: async function (req: Request<{}, {}, { accessKey: string }>, res: Response) {
     if (!req.body.accessKey) {
       return res.status(RegisterCourseStatus.MissingArgument).send({
         message: "Course registration failed: access key was not indicated.",
@@ -234,10 +252,10 @@ var functions = {
 
     const accessKey = String(req.body.accessKey).toUpperCase();
 
-    let course;
+    let course: CourseDocument | null;
     try {
-      course = await Course.findOne({ accessKey }).exec();
-    } catch (err) {
+      course = await CourseModel.findOne({ accessKey }).exec();
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(RegisterCourseStatus.InvalidAccessKey).send({
         message: `Course registration failed: error while searching for access key ${accessKey}`,
@@ -252,20 +270,23 @@ var functions = {
       });
     }
 
-    let session;
+    let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(RegisterCourseStatus.InternalError).send({
         message: `Course registration failed: internal error (session).`,
       });
     }
     try {
-      let registrationResult;
+      let registrationResult: {
+        status: RegisterCourseStatus;
+        registration?: CourseRegistrationDocument;
+      };
       await session.withTransaction(async () => {
         // count active registrations for the course
         const registrationLimit = Math.max(1, course.registrationLimit || 1000);
-        const activeCount = await CourseRegistration.countDocuments({
+        const activeCount = await CourseRegistrationModel.countDocuments({
           course: course._id,
           isActive: true,
         })
@@ -273,7 +294,7 @@ var functions = {
           .exec();
 
         // is the user already registered for the course
-        let existing = await CourseRegistration.findOne({
+        let existing = await CourseRegistrationModel.findOne({
           course: course._id,
           user: req.token._id,
         })
@@ -296,9 +317,7 @@ var functions = {
             req.token.role === "STUDENT"
           ) {
             // limit reached, cannot reactivate
-            const err = new Error("Registration limit reached");
-            err.status = RegisterCourseStatus.LimitReached;
-            throw err; // abort transaction
+            throw new CourseRegistrationLimitReachedError();
           }
           // reactivate registration
           existing.isActive = true;
@@ -314,12 +333,10 @@ var functions = {
 
         // no existing registration
         if (activeCount >= registrationLimit && req.token.role === "STUDENT") {
-          const err = new Error("Registration limit reached");
-          err.status = RegisterCourseStatus.LimitReached;
-          throw err;
+          throw new CourseRegistrationLimitReachedError();
         }
 
-        const newReg = new CourseRegistration({
+        const newReg = new CourseRegistrationModel({
           course: course._id,
           user: req.token._id,
           registrationDates: [new Date()],
@@ -351,13 +368,16 @@ var functions = {
       return res.status(RegisterCourseStatus.Registered).send({
         course: populatedCourse.toJSON(),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      if (err && err.status && Number.isInteger(err.status)) {
-        return res.status(err.status).send({ message: err.message });
+      if (err instanceof CourseRegistrationLimitReachedError) {
+        return res.status(RegisterCourseStatus.LimitReached).send({
+          message: "Course registration limit reached.",
+        });
       }
+
       // Duplicate key (race condition)
-      if (err && err.code === 11000) {
+      if (err && err instanceof mongoose.mongo.MongoError && err.code === 11000) {
         return res.status(RegisterCourseStatus.AlreadyRegistered).send({
           message: "Course registration: user already registered.",
         });
@@ -367,10 +387,10 @@ var functions = {
         message: `Course registration failed: internal error. (${err})`,
       });
     } finally {
-      if (session) session.endSession();
+      session.endSession();
     }
   },
-  deregisterFromCourse: async function (req, res) {
+  deregisterFromCourse: async function (req: Request<{}, {}, { courseId: string }>, res: Response) {
     if (!req.body.courseId) {
       logger.warn("Course deregistration failed: course id was not indicated.");
       return res.status(UnregisterCourseStatus.MissingArgument).send({
@@ -382,10 +402,10 @@ var functions = {
         message: "Course deregistration failed: course id is invalid.",
       });
     }
-    const courseId = mongoose.Types.ObjectId(req.body.courseId);
+    const courseId = new mongoose.Types.ObjectId(req.body.courseId);
     try {
       const updatedCourseRegistration =
-        await CourseRegistration.findOneAndUpdate(
+        await CourseRegistrationModel.findOneAndUpdate(
           { course: courseId, user: req.token._id, isActive: true },
           { $set: { isActive: false } },
           { new: true },
@@ -401,20 +421,20 @@ var functions = {
       return res.status(UnregisterCourseStatus.Unregistered).send({
         message: "Deregistered from the course.",
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(UnregisterCourseStatus.InternalError).send({
         message: `Course deregistration failed: internal error. (${err})`,
       });
     }
   },
-  getRegisteredCoursesForUser: async function (req, res) {
-    const userId = mongoose.Types.ObjectId(req.token._id);
+  getRegisteredCoursesForUser: async function (req: Request, res: Response) {
+    const userId = new mongoose.Types.ObjectId(req.token._id);
 
     try {
       // we lookup only the user's active CourseRegistrations and then keep only Courses
       // which have such an associated CourseRegistration that is active.
-      const courses = await Course.aggregate([
+      const courses = await CourseModel.aggregate([
         {
           $lookup: {
             from: "course_registrations",
@@ -461,7 +481,7 @@ var functions = {
       }
 
       // Populate courses
-      const populatedCourses = await ModelHelper.populateCourse(courses);
+      const populatedCourses = await ModelHelper.populateCourse(courses as CourseDocument[]);
       if (!populatedCourses) {
         return res.status(GetRegisteredCoursesStatus.InternalError).send({
           message:
@@ -473,7 +493,7 @@ var functions = {
         message: "Registered courses downloaded.",
         courses: JSON.parse(JSON.stringify(populatedCourses)),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetRegisteredCoursesStatus.InternalError).send({
         message:
@@ -481,23 +501,23 @@ var functions = {
       });
     }
   },
-  getDemoCourseAccessKey: function (req, res) {
+  getDemoCourseAccessKey: function (_: Request, res: Response) {
     return res.status(200).send({
       accessKey: "90EA53F0",
       message: "Demo course access key retrieved.",
     });
   },
   // For teachers
-  getUserRegistrationsForCourse: async function (req, res) {
-    if (!req.params.courseId) {
-      return res.status(GetRegisteredUsersStatus.MissingArgument).send({
-        message: "Course registered users fetching failed: missing course id.",
-      });
-    }
+  getUserRegistrationsForCourse: async function (req: Request<{ courseId: string }>, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message:
           "Fetching registered users for course failed: only teachers are authorized.",
+      });
+    }
+    if (!req.params.courseId) {
+      return res.status(GetRegisteredUsersStatus.MissingArgument).send({
+        message: "Course registered users fetching failed: missing course id.",
       });
     }
     if (!mongoose.isValidObjectId(req.params.courseId)) {
@@ -506,8 +526,8 @@ var functions = {
       });
     }
     try {
-      const course = await Course.findById(
-        mongoose.Types.ObjectId(req.params.courseId),
+      const course = await CourseModel.findById(
+        new mongoose.Types.ObjectId(req.params.courseId),
       ).exec();
       if (!course) {
         return res.status(GetRegisteredUsersStatus.None).send({
@@ -516,7 +536,7 @@ var functions = {
         });
       }
 
-      const courseRegistrations = await CourseRegistration.find({
+      const courseRegistrations = await CourseRegistrationModel.find({
         course: course._id,
       })
         .populate("user", "username role")
@@ -530,7 +550,7 @@ var functions = {
       return res
         .status(GetRegisteredUsersStatus.Retrieved)
         .send({ registrations: courseRegistrations });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetRegisteredUsersStatus.InternalError).send({
         message: "Course registered users fetching failed: internal error.",
@@ -539,4 +559,4 @@ var functions = {
   },
 };
 
-module.exports = functions;
+export default functions;

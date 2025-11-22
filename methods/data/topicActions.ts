@@ -1,41 +1,32 @@
-var Topic = require("../../models/topic");
-const { Permission, hasPermissions } = require("../../models/permission");
-var mongoose = require("mongoose");
-const logger = require("../../middleware/logger");
-
+import { TopicDocument, TopicModel } from "../../models/topic";
+import { PermissionModel, hasPermissions } from "../../models/permission";
+import mongoose from "mongoose";
+import logger from "../../middleware/logger";
+import { Request, Response } from "express";
 // Possible status codes
-const CreateOrUpdateTopicStatus = Object.freeze({
-  Created: 200,
-  Updated: 209,
-  MissingArguments: 400,
-  InternalError: 500,
-});
-const GetTopicsStatus = Object.freeze({
-  Retrieved: 200,
-  None: 209,
-  InternalError: 500,
-});
-const RateTopicStatus = Object.freeze({
-  Rated: 200,
-  Updated: 209,
-  MissingArguments: 400,
-  InvalidCourseSessionId: 452,
-  InvalidTopicId: 453,
-  InvalidRating: 454,
-  InvalidCourseId: 455,
-  SessionOver: 456,
-  StudentsOnly: 457,
-  InternalError: 500,
-});
-const GetTopicRatingsStatus = Object.freeze({
-  Retrieved: 200,
-  NoRatings: 209,
-  MissingArguments: 400,
-  InternalError: 500,
-});
+enum CreateOrUpdateTopicStatus {
+  Created = 200,
+  Updated = 209,
+  MissingArguments = 400,
+  InternalError = 500,
+}
+enum GetTopicsStatus {
+  Retrieved = 200,
+  None = 209,
+  InternalError = 500,
+}
+
+class CreateOrUpdateTopicPermissionError extends Error {
+  constructor() {
+    super("Lacking permission to update");
+    this.name = "CreateOrUpdateTopicPermissionError";
+    Object.setPrototypeOf(this, CreateOrUpdateTopicPermissionError.prototype);
+  }
+}
+
 
 var functions = {
-  createOrUpdateTopic: async function (req, res) {
+  createOrUpdateTopic: async function (req: Request<{}, {}, { topic: string }>, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Topic creation failed: only teachers are authorized.",
@@ -46,14 +37,16 @@ var functions = {
         message: "Topic creation failed: missing topic parameter.",
       });
     }
-    const newTopic = new Topic(JSON.parse(req.body.topic));
-    if (!newTopic) {
+    let newTopic: TopicDocument;
+    try {
+      newTopic = new TopicModel(JSON.parse(req.body.topic));
+    } catch (err) {
       return res.status(CreateOrUpdateTopicStatus.InternalError).send({
         message: "Topic creation failed: topic could not be deserialized.",
       });
     }
 
-    let session;
+    let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
     } catch (err) {
@@ -62,12 +55,12 @@ var functions = {
       });
     }
 
-    let result = null;
-    let responseStatusCode = CreateOrUpdateTopicStatus.Updated;
+    let result: TopicDocument | null = null;
+    let responseStatusCode: number = CreateOrUpdateTopicStatus.Updated;
 
     try {
       await session.withTransaction(async () => {
-        const existingTopic = await Topic.findById(newTopic._id)
+        const existingTopic = await TopicModel.findById(newTopic._id)
           .session(session)
           .exec();
         // New topic
@@ -75,7 +68,7 @@ var functions = {
           responseStatusCode = CreateOrUpdateTopicStatus.Created;
           const savedTopic = await newTopic.save({ session });
           // grant creator full permissions for this topic (use savedTopic._id)
-          await new Permission({
+          await new PermissionModel({
             user: req.token._id,
             resourceType: "TOPIC",
             resource: savedTopic._id,
@@ -86,7 +79,7 @@ var functions = {
           // Update existing topic
 
           // Does the teacher have permission to update the existing activity
-          const permission = await Permission.findOne({
+          const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingTopic._id,
             resourceType: "TOPIC",
@@ -99,13 +92,11 @@ var functions = {
             !Number.isInteger(permission.level) ||
             !hasPermissions(["write"], permission.level)
           ) {
-            const err = new Error("Lacking permission to update");
-            err.status = 403; // known status code for "forbidden"
-            throw err;
+            throw new CreateOrUpdateTopicPermissionError();
           }
 
           newTopic.version = existingTopic.version + 1;
-          const updatedTopic = await Topic.findByIdAndUpdate(
+          const updatedTopic = await TopicModel.findByIdAndUpdate(
             existingTopic._id,
             newTopic,
             { new: true, session },
@@ -128,26 +119,26 @@ var functions = {
           topic: result.toJSON(),
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      if (err && err.status && Number.isInteger(err.status)) {
-        return res.status(err.status).send({ message: err.message });
+      if (err instanceof CreateOrUpdateTopicPermissionError) {
+        return res.status(403).send({ message: err.message });
       }
       return res.status(CreateOrUpdateTopicStatus.InternalError).send({
         message: `Topic creation/update failed: internal error. (${err})`,
       });
     } finally {
-      if (session) session.endSession();
+      session.endSession();
     }
   },
-  getTopics: async function (req, res) {
+  getTopics: async function (req: Request, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Topic fetching failed: only teachers are authorized.",
       });
     }
     try {
-      const topics = await Topic.aggregate([
+      const topics = await TopicModel.aggregate([
         {
           $lookup: {
             from: "permissions",
@@ -162,7 +153,7 @@ var functions = {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
                 resourceType: "TOPIC",
-                user: mongoose.Types.ObjectId(req.token._id),
+                user: new mongoose.Types.ObjectId(req.token._id),
                 level: { $gte: 4 },
               },
             },
@@ -177,7 +168,7 @@ var functions = {
       }
       return res
         .status(GetTopicsStatus.Retrieved)
-        .send({ topics: JSON.parse(JSON.stringify(topics)) });
+        .send({ topics });
     } catch (err) {
       logger.error(err);
       return res.status(GetTopicsStatus.InternalError).send({
@@ -186,24 +177,24 @@ var functions = {
     }
   },
   // DEPRECATED: for compatibility with older client versions, we just return a generic response that indicates success.
-  rateTopic: function (req, res) {
-    return res.status(RateTopicStatus.Rated).send({
+  rateTopic: function (_: Request, res: Response) {
+    return res.status(200).send({
       message: "Topic rating for course session stored.",
     });
   },
   // DEPRECATED: for compatibility with older client versions, we just return an empty array.
-  getTopicRatings: function (req, res) {
-    return res.status(GetTopicRatingsStatus.Retrieved).send({
+  getTopicRatings: function (_: Request, res: Response) {
+    return res.status(200).send({
       message: "Topic ratings retrieved.",
-      topicRatings: JSON.parse(JSON.stringify([])),
+      topicRatings: [],
     });
   },
   // DEPRECATED: for compatibility with older client versions, we just respond that there are no topic ratings.
-  getTopicsRatings: function (req, res) {
+  getTopicsRatings: function (_: Request, res: Response) {
     return res
-      .status(GetTopicRatingsStatus.NoRatings)
+      .status(209)
       .send({ message: "No Topic ratings found." });
   },
 };
 
-module.exports = functions;
+export default functions;

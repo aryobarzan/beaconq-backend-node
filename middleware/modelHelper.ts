@@ -16,7 +16,7 @@ import logger from "./logger";
 
 const functions = {
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
-  populateCourse: async function (course: CourseDocument): Promise<CourseDocument> {
+  populateCourse: async function (course: CourseDocument | CourseDocument[]): Promise<CourseDocument> {
     return CourseModel.populate(course, [
       { path: "sessions.topics", model: "Topic" },
       {
@@ -41,7 +41,7 @@ const functions = {
   },
 
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
-  populateQuiz: async function (quiz: QuizDocument): Promise<QuizDocument> {
+  populateQuiz: async function (quiz: QuizDocument | QuizDocument[]): Promise<QuizDocument> {
     // [{ path: "activities", model: "Activity" }, { path: "activities", model: "ChoiceActivity" }, { path: "activities", model: "RecallActivity" }]
     return QuizModel.populate(quiz, [
       {

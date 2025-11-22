@@ -1,63 +1,74 @@
-var Quiz = require("../../models/quiz");
-const { Permission, hasPermissions } = require("../../models/permission");
-var ModelHelper = require("../../middleware/modelHelper");
-var mongoose = require("mongoose");
-const logger = require("../../middleware/logger");
+import { QuizModel, QuizDocument } from "../../models/quiz";
+import { PermissionModel, hasPermissions } from "../../models/permission";
+import ModelHelper from "../../middleware/modelHelper";
+import mongoose from "mongoose";
+import logger from "../../middleware/logger";
+import { Request, Response } from "express";
 
-const CreateOrUpDateQuizStatus = Object.freeze({
-  Created: 200,
-  Updated: 209,
-  MissingArguments: 400,
-  InternalError: 500,
-});
+enum CreateOrUpdateQuizStatus {
+  Created = 200,
+  Updated = 209,
+  MissingArguments = 400,
+  InternalError = 500,
+}
 
-const GetQuizzesStatus = Object.freeze({
-  Retrieved: 200,
-  None: 209,
-  InternalError: 500,
-});
+enum GetQuizzesStatus {
+  Retrieved = 200,
+  None = 209,
+  InternalError = 500,
+}
+
+class CreateOrUpdateQuizPermissionError extends Error {
+  constructor() {
+    super("Lacking permission to update");
+    this.name = "CreateOrUpdateQuizPermissionError";
+    Object.setPrototypeOf(this, CreateOrUpdateQuizPermissionError.prototype);
+  }
+}
 
 var functions = {
-  createOrUpdateQuiz: async function (req, res) {
-    if (!req.body.quiz) {
-      return res
-        .status(CreateOrUpDateQuizStatus.MissingArguments)
-        .send({ message: "Quiz creation failed: quiz parameter missing." });
-    }
+  createOrUpdateQuiz: async function (req: Request<{}, {}, { quiz: string }>, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Quiz creation failed: only teachers are authorized.",
       });
     }
-    var newQuiz = new Quiz(JSON.parse(req.body.quiz));
-    if (!newQuiz) {
-      return res.status(CreateOrUpDateQuizStatus.InternalError).send({
+    if (!req.body.quiz) {
+      return res
+        .status(CreateOrUpdateQuizStatus.MissingArguments)
+        .send({ message: "Quiz creation failed: quiz parameter missing." });
+    }
+    let newQuiz: QuizDocument;
+    try {
+      newQuiz = new QuizModel(JSON.parse(req.body.quiz));
+    } catch (err: unknown) {
+      return res.status(CreateOrUpdateQuizStatus.InternalError).send({
         message: "Quiz creation failed: quiz could not be deserialized.",
       });
     }
 
-    let session;
+    let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
-    } catch (err) {
-      return res.status(CreateOrUpDateQuizStatus.InternalError).send({
+    } catch (err: unknown) {
+      return res.status(CreateOrUpdateQuizStatus.InternalError).send({
         message: `Quiz creation/update failed: internal error (session). (${err})`,
       });
     }
 
-    let result = null;
-    let responseStatusCode = CreateOrUpDateQuizStatus.Updated;
+    let result: QuizDocument | null = null;
+    let responseStatusCode: number = CreateOrUpdateQuizStatus.Updated;
     try {
       await session.withTransaction(async () => {
-        let existingQuiz = await Quiz.findById(newQuiz._id)
+        const existingQuiz = await QuizModel.findById(newQuiz._id)
           .session(session)
           .exec();
         if (!existingQuiz) {
-          responseStatusCode = CreateOrUpDateQuizStatus.Created;
+          responseStatusCode = CreateOrUpdateQuizStatus.Created;
           // New quiz
           const savedQuiz = await newQuiz.save({ session });
           // grant full permissions to the creator for this quiz
-          await new Permission({
+          await new PermissionModel({
             user: req.token._id,
             resourceType: "QUIZ",
             resource: savedQuiz._id,
@@ -72,7 +83,7 @@ var functions = {
           // Update existing quiz
 
           // Does the teacher have permission to update the existing activity
-          const permission = await Permission.findOne({
+          const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingQuiz._id,
             resourceType: "QUIZ",
@@ -85,14 +96,12 @@ var functions = {
             !Number.isInteger(permission.level) ||
             !hasPermissions(["write"], permission.level)
           ) {
-            const err = new Error("Lacking permission to update");
-            err.status = 403; // known status code for "forbidden"
-            throw err;
+            throw new CreateOrUpdateQuizPermissionError();
           }
 
           newQuiz.version = existingQuiz.version + 1;
           /// Set {new: true} such that the updated model is returned by mongoose
-          const updatedQuiz = await Quiz.findByIdAndUpdate(
+          const updatedQuiz = await QuizModel.findByIdAndUpdate(
             existingQuiz._id,
             newQuiz,
             { new: true, session },
@@ -111,7 +120,7 @@ var functions = {
       // Creation or update of quiz was successful.
       if (result) {
         const message =
-          responseStatusCode == CreateOrUpDateQuizStatus.Created
+          responseStatusCode == CreateOrUpdateQuizStatus.Created
             ? "Quiz created."
             : "Quiz updated.";
         return res.status(responseStatusCode).send({
@@ -119,26 +128,26 @@ var functions = {
           quiz: result.toJSON(),
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      if (err && err.status && Number.isInteger(err.status)) {
-        return res.status(err.status).send({ message: err.message });
+      if (err instanceof CreateOrUpdateQuizPermissionError) {
+        return res.status(403).send({ message: err.message });
       }
-      return res.status(CreateOrUpDateQuizStatus.InternalError).send({
+      return res.status(CreateOrUpdateQuizStatus.InternalError).send({
         message: `Quiz creation/update failed: internal error. (${err})`,
       });
     } finally {
-      if (session) session.endSession();
+      session.endSession();
     }
   },
-  getQuizzes: async function (req, res) {
+  getQuizzes: async function (req: Request, res: Response) {
     if (req.token.role !== "TEACHER") {
       return res.status(403).send({
         message: "Quiz fetching failed: only teachers are authorized.",
       });
     }
     try {
-      const quizzes = await Quiz.aggregate([
+      const quizzes = await QuizModel.aggregate([
         {
           $lookup: {
             from: "permissions",
@@ -153,7 +162,7 @@ var functions = {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
                 resourceType: "QUIZ",
-                user: mongoose.Types.ObjectId(req.token._id),
+                user: new mongoose.Types.ObjectId(req.token._id),
                 level: { $gte: 4 },
               },
             },
@@ -166,7 +175,7 @@ var functions = {
           .status(GetQuizzesStatus.None)
           .send({ message: "Quiz fetching found no quizzes." });
       }
-      const populatedQuizzes = await ModelHelper.populateQuiz(quizzes);
+      const populatedQuizzes = await ModelHelper.populateQuiz(quizzes as QuizDocument[]);
       if (!populatedQuizzes) {
         res.status(GetQuizzesStatus.InternalError).send({
           message: "Quiz fetching failed: failed to populate activities.",
@@ -176,7 +185,7 @@ var functions = {
       return res
         .status(GetQuizzesStatus.Retrieved)
         .send({ quizzes: JSON.parse(JSON.stringify(populatedQuizzes)) });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res
         .status(GetQuizzesStatus.InternalError)
@@ -185,4 +194,4 @@ var functions = {
   },
 };
 
-module.exports = functions;
+export default functions;
