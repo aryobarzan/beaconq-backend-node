@@ -173,7 +173,7 @@ async function main() {
   app.use(express.json({ limit: "50mb" }));
 
   // pino-http middleware
-  app.use(requestLogger.express());
+  app.use(requestLogger.createHttpLogger());
 
   app.get("/health", (req, res) => res.status(200).send("OK"));
 
