@@ -3,7 +3,7 @@ import { CourseSession } from "../models/courseSession";
 import { CourseRegistrationModel } from "../models/courseRegistration";
 import { Quiz, QuizModel, QuizDocument } from "../models/quiz";
 import { ActivityDocument, ActivityModel, ChoiceActivityDocument, ChoiceActivityModel, DartBlockActivityDocument, DartBlockActivityModel } from "../models/activity";
-import { ScheduledQuiz, model as ScheduledQuizModel } from "../models/scheduledQuiz";
+import { ScheduledQuizDocument, model as ScheduledQuizModel } from "../models/scheduledQuiz";
 import { ChoiceActivityUserAnswerModel, RecallActivityUserAnswerModel, DartBlockActivityUserAnswerModel, ChoiceActivityUserAnswerDocument, RecallActivityUserAnswerDocument, DartBlockActivityUserAnswerDocument } from "../models/logs/activityUserAnswer";
 import { ChoiceActivityFeedbackViewModel, DartBlockActivityFeedbackViewModel, ChoiceActivityFeedbackViewDocument, DartBlockActivityFeedbackViewDocument } from "../models/logs/activityFeedbackView";
 import { SurveyAnswerModel, SurveyAnswerDocument } from "../models/logs/surveyAnswer";
@@ -16,7 +16,7 @@ import logger from "./logger";
 
 const functions = {
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
-  populateCourse: function (course: CourseDocument): Promise<CourseDocument> {
+  populateCourse: async function (course: CourseDocument): Promise<CourseDocument> {
     return CourseModel.populate(course, [
       { path: "sessions.topics", model: "Topic" },
       {
@@ -64,7 +64,7 @@ const functions = {
     ]);
   },
 
-  findScheduledQuiz: async function (scheduledQuizId: string): Promise<ScheduledQuiz | null> {
+  findScheduledQuiz: async function (scheduledQuizId: string): Promise<ScheduledQuizDocument | null> {
     if (!mongoose.isValidObjectId(scheduledQuizId)) {
       logger.error(
         `[ModelHelper.findScheduledQuiz] Invalid scheduledQuizId: ${scheduledQuizId}`,
@@ -197,7 +197,7 @@ const functions = {
       if (!courses) {
         return [];
       } else {
-        return courses.map((c) => new CourseModel(c));
+        return courses
       }
     }
   },
