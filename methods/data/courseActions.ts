@@ -428,7 +428,7 @@ const functions = {
       });
     }
   },
-  getRegisteredCoursesForUser: async function (req: Request, res: Response) {
+  getRegisteredCoursesForUser: async function (req: Request<{}, {}, {}, { metadataOnly?: string }>, res: Response) {
     const userId = new mongoose.Types.ObjectId(req.token._id);
 
     try {

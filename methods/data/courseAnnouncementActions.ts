@@ -1,23 +1,39 @@
-var CourseAnnouncement = require("../../models/courseAnnouncement");
-const { Permission, hasPermissions } = require("../../models/permission");
-var mongoose = require("mongoose");
-const logger = require("../../middleware/logger");
+import { CourseAnnouncementDocument, CourseAnnouncementModel } from "../../models/courseAnnouncement";
+import { PermissionModel, hasPermissions } from "../../models/permission";
+import mongoose from "mongoose";
+import logger from "../../middleware/logger";
+import { Request, Response } from "express";
 
 // Possible status codes
-const CreateOrUpdateCourseAnnouncementStatus = Object.freeze({
-  Created: 200,
-  Updated: 209,
-  MissingArguments: 400,
-  InternalError: 500,
-});
-const GetCourseAnnouncementsStatus = Object.freeze({
-  Retrieved: 200,
-  MissingArguments: 400,
-  InternalError: 500,
-});
+enum CreateOrUpdateCourseAnnouncementStatus {
+  Created = 200,
+  Updated = 209,
+  MissingArguments = 400,
+  InternalError = 500,
+}
+enum GetCourseAnnouncementsStatus {
+  Retrieved = 200,
+  MissingArguments = 400,
+  InternalError = 500,
+}
 
-var functions = {
-  createOrUpdateCourseAnnouncement: async function (req, res) {
+class CreateOrUpdateCourseAnnouncementPermissionError extends Error {
+  constructor() {
+    super("Lacking permission to update");
+    this.name = "CreateOrUpdateCourseAnnouncementPermissionError";
+    Object.setPrototypeOf(this, CreateOrUpdateCourseAnnouncementPermissionError.prototype);
+  }
+}
+
+
+const functions = {
+  createOrUpdateCourseAnnouncement: async function (req: Request<{}, {}, { courseAnnouncement: string }>, res: Response) {
+    if (req.token.role !== "TEACHER") {
+      return res.status(403).send({
+        message:
+          "Course announcement creation failed: only teachers are authorized.",
+      });
+    }
     if (!req.body.courseAnnouncement) {
       return res
         .status(CreateOrUpdateCourseAnnouncementStatus.MissingArguments)
@@ -25,17 +41,11 @@ var functions = {
           message: "Course announcement creation failed: parameter missing.",
         });
     }
-    if (req.token.role !== "TEACHER") {
-      return res.status(403).send({
-        message:
-          "Course announcement creation failed: only teachers are authorized.",
-      });
-    }
 
-    let incomingAnnouncement;
+    let incomingAnnouncement: CourseAnnouncementDocument;
     try {
       incomingAnnouncement = JSON.parse(req.body.courseAnnouncement);
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res
         .status(CreateOrUpdateCourseAnnouncementStatus.MissingArguments)
@@ -44,12 +54,12 @@ var functions = {
         });
     }
 
-    incomingAnnouncement.author = req.token._id;
+    incomingAnnouncement.author = new mongoose.Types.ObjectId(req.token._id);
 
-    let session;
+    let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res
         .status(CreateOrUpdateCourseAnnouncementStatus.InternalError)
@@ -60,13 +70,13 @@ var functions = {
     }
 
     try {
-      let responseStatus = CreateOrUpdateCourseAnnouncementStatus.Updated;
-      let savedAnnouncement;
+      let responseStatus: number = CreateOrUpdateCourseAnnouncementStatus.Updated;
+      let savedAnnouncement: CourseAnnouncementDocument | null = null;
 
       await session.withTransaction(async () => {
-        let existingAnnouncement = null;
+        let existingAnnouncement: CourseAnnouncementDocument | null = null;
         if (incomingAnnouncement._id) {
-          existingAnnouncement = await CourseAnnouncement.findById(
+          existingAnnouncement = await CourseAnnouncementModel.findById(
             incomingAnnouncement._id,
           )
             .session(session)
@@ -75,11 +85,11 @@ var functions = {
 
         if (!existingAnnouncement) {
           // Create new announcement
-          const newAnnouncement = new CourseAnnouncement(incomingAnnouncement);
+          const newAnnouncement = new CourseAnnouncementModel(incomingAnnouncement);
           savedAnnouncement = await newAnnouncement.save({ session });
 
           // Create permission for the creator within same transaction
-          const perm = new Permission({
+          const perm = new PermissionModel({
             user: req.token._id,
             resourceType: "COURSE_ANNOUNCEMENT",
             resource: savedAnnouncement._id,
@@ -92,7 +102,7 @@ var functions = {
           // Update existing course announcement
 
           // Does the teacher have permission to update the existing activity
-          const permission = await Permission.findOne({
+          const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingAnnouncement._id,
             resourceType: "COURSE_ANNOUNCEMENT",
@@ -105,16 +115,14 @@ var functions = {
             !Number.isInteger(permission.level) ||
             !hasPermissions(["write"], permission.level)
           ) {
-            const err = new Error("Lacking permission to update");
-            err.status = 403; // known status code for "forbidden"
-            throw err;
+            throw new CreateOrUpdateCourseAnnouncementPermissionError();
           }
 
-          const newAnnouncement = new CourseAnnouncement(incomingAnnouncement);
+          const newAnnouncement = new CourseAnnouncementModel(incomingAnnouncement);
           newAnnouncement.version = existingAnnouncement.version + 1;
           /// Set {new: true} such that the updated model is returned by mongoose
           const updatedAnnouncement =
-            await CourseAnnouncement.findByIdAndUpdate(
+            await CourseAnnouncementModel.findByIdAndUpdate(
               existingAnnouncement._id,
               newAnnouncement,
               { new: true, runValidators: true, session },
@@ -147,12 +155,12 @@ var functions = {
           responseStatus === CreateOrUpdateCourseAnnouncementStatus.Created
             ? "Course announcement created."
             : "Course announcement updated.",
-        courseAnnouncement: JSON.stringify(savedAnnouncement),
+        courseAnnouncement: savedAnnouncement.toJSON(),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      if (err && err.status && Number.isInteger(err.status)) {
-        return res.status(err.status).send({ message: err.message });
+      if (err instanceof CreateOrUpdateCourseAnnouncementPermissionError) {
+        return res.status(403).send({ message: err.message });
       }
       return res
         .status(CreateOrUpdateCourseAnnouncementStatus.InternalError)
@@ -160,10 +168,10 @@ var functions = {
           message: `Course announcement creation failed: internal error. (${err})`,
         });
     } finally {
-      if (session) session.endSession();
+      session.endSession();
     }
   },
-  getCourseAnnouncements: async function (req, res) {
+  getCourseAnnouncements: async function (req: Request<{ courseId: string }, {}, {}, { recentOnly?: string }>, res: Response) {
     if (!req.params.courseId) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message: "Course announcements fetching failed: parameter missing.",
@@ -174,11 +182,11 @@ var functions = {
         message: "Course announcements fetching failed: parameter missing.",
       });
     }
-    const courseId = mongoose.Types.ObjectId(req.params.courseId);
-    var searchConditions = [{ course: courseId }];
-    if (req.query.recentOnly) {
+    const courseId = new mongoose.Types.ObjectId(req.params.courseId);
+    let searchConditions: any[] = [{ course: courseId }];
+    if (String(req.query.recentOnly).toLowerCase() === "true") {
       const currentDate = new Date();
-      var endDate = new Date(currentDate);
+      const endDate = new Date(currentDate);
       endDate.setDate(currentDate.getDate() + 28);
       searchConditions.push({
         $and: [
@@ -189,16 +197,16 @@ var functions = {
     }
 
     try {
-      const courseAnnouncements = await CourseAnnouncement.find({
+      const courseAnnouncements = await CourseAnnouncementModel.find({
         $and: searchConditions,
       })
         .lean()
         .exec();
       return res.status(GetCourseAnnouncementsStatus.Retrieved).send({
         message: "Course announcements retrieved.",
-        courseAnnouncements: JSON.parse(JSON.stringify(courseAnnouncements)),
+        courseAnnouncements: courseAnnouncements,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetCourseAnnouncementsStatus.InternalError).send({
         message:
@@ -206,14 +214,14 @@ var functions = {
       });
     }
   },
-  getCourseAnnouncementsForCourses: async function (req, res) {
+  getCourseAnnouncementsForCourses: async function (req: Request<{}, {}, { courseIds: string, recentOnly: string }>, res: Response) {
     if (!req.body.courseIds) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message:
           "Course announcement fetching for course(s) failed: course IDs missing. [ERR924]",
       });
     }
-    let courseIds;
+    let courseIds: string[];
     try {
       courseIds = JSON.parse(req.body.courseIds);
       if (!courseIds || !Array.isArray(courseIds) || courseIds.length === 0) {
@@ -222,7 +230,7 @@ var functions = {
             "Course announcement fetching for course(s) failed: course IDs missing. [ERR924B]",
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message:
           "Course announcement fetching for course(s) failed: course IDs missing. [ERR924C]",
@@ -231,7 +239,7 @@ var functions = {
 
     const validCourseObjectIds = courseIds
       .filter((id) => mongoose.isValidObjectId(id))
-      .map((id) => mongoose.Types.ObjectId(id));
+      .map((id) => new mongoose.Types.ObjectId(id));
 
     if (validCourseObjectIds.length === 0) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
@@ -240,10 +248,10 @@ var functions = {
       });
     }
 
-    let searchConditions = [{ course: { $in: validCourseObjectIds } }];
+    let searchConditions: any[] = [{ course: { $in: validCourseObjectIds } }];
     if (String(req.body.recentOnly).toLowerCase() === "true") {
       const currentDate = new Date();
-      var endDate = new Date(currentDate);
+      const endDate = new Date(currentDate);
       endDate.setDate(currentDate.getDate() + 28);
       searchConditions.push({
         $and: [
@@ -253,17 +261,16 @@ var functions = {
       });
     }
     try {
-      const courseAnnouncements = await CourseAnnouncement.find({
+      const courseAnnouncements = await CourseAnnouncementModel.find({
         $and: searchConditions,
       })
         .lean()
         .exec();
       return res.status(GetCourseAnnouncementsStatus.Retrieved).send({
         message: "Course announcements retrieved.",
-        // TODO: necessary?
-        courseAnnouncements: JSON.parse(JSON.stringify(courseAnnouncements)),
+        courseAnnouncements: courseAnnouncements,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetCourseAnnouncementsStatus.InternalError).send({
         message:
@@ -273,4 +280,4 @@ var functions = {
   },
 };
 
-module.exports = functions;
+export default functions;
