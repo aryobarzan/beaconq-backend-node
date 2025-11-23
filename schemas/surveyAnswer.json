@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "surveyAnswer.json",
+  "definitions": {
+    "SurveyQuestionAnswer": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "questionType": {
+          "type": "string"
+        },
+        "answer": {
+          "type": "string"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "isMultipleChoice": {
+          "type": "boolean"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "question",
+        "questionType",
+        "answer"
+      ],
+      "additionalProperties": false
+    },
+    "SurveyAnswer": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "scheduledQuiz": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "answers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SurveyQuestionAnswer"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "scheduledQuiz",
+        "serverTimestamp",
+        "answers"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

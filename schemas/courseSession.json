@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "courseSession.json",
+  "definitions": {
+    "CourseSession": {
+      "type": "object",
+      "properties": {
+        "_id": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "title": {
+          "type": "string"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Types.ObjectId"
+          }
+        },
+        "currentTopicIndex": {
+          "type": "number"
+        },
+        "startDateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endDateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scheduledQuizzes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ScheduledQuiz"
+          }
+        },
+        "beaconResources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BeaconResource"
+          }
+        }
+      },
+      "required": [
+        "_id",
+        "title",
+        "topics",
+        "currentTopicIndex",
+        "startDateTime",
+        "endDateTime",
+        "scheduledQuizzes"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

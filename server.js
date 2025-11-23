@@ -18,6 +18,8 @@ const requestLogger = require("./middleware/requestLogger");
 const logger = require("./middleware/logger");
 const firebaseAdmin = require("firebase-admin");
 const firebaseHelper = require("./middleware/firebaseHelper");
+const { swaggerSpec } = require("./swagger");
+const swaggerUi = require("swagger-ui-express");
 
 // set timezone
 process.env.TZ = "Europe/Amsterdam";
@@ -182,6 +184,9 @@ async function main() {
   app.use(passport.initialize());
   require("./config/passport")(passport);
   app.use("/secure", auth, secureRoutes);
+
+  // Swagger documentation
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // custom 404 + JSON parse error handler + global fallback
   app.use((req, res, next) => {

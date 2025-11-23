@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "permission.json",
+  "definitions": {
+    "Permission": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "resourceType": {
+          "type": "string",
+          "enum": [
+            "ACTIVITY",
+            "QUIZ",
+            "TOPIC",
+            "COURSE",
+            "COURSE_ANNOUNCEMENT"
+          ]
+        },
+        "resource": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "level": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "resourceType",
+        "resource",
+        "level"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

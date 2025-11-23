@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "userPatronProfileChange.json",
+  "definitions": {
+    "UserPatronProfileChange": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "course": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "oldPatron": {
+          "type": "string"
+        },
+        "newPatron": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "newPatron"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "appFeedback.json",
+  "definitions": {
+    "AppFeedback": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "isAnonymous": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "appFeedbackType": {
+          "type": "string"
+        },
+        "includeLogFile": {
+          "type": "boolean"
+        },
+        "devicePlatform": {
+          "type": "string"
+        },
+        "appVersion": {
+          "type": "string"
+        },
+        "appBuildNumber": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "isAnonymous",
+        "message",
+        "appFeedbackType",
+        "includeLogFile",
+        "devicePlatform",
+        "appVersion",
+        "appBuildNumber"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

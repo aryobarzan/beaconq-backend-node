@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "userAchievement.json",
+  "definitions": {
+    "UserAchievement": {
+      "type": "object",
+      "properties": {
+        "achievement": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "criteriaProgress": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "unlockedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "requiresUpload": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "achievement",
+        "user",
+        "criteriaProgress"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

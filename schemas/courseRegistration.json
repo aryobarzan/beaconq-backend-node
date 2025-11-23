@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "courseRegistration.json",
+  "definitions": {
+    "CourseRegistration": {
+      "type": "object",
+      "properties": {
+        "course": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "registrationDates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "course",
+        "user",
+        "registrationDates",
+        "isActive"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

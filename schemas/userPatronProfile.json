@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "userPatronProfile.json",
+  "definitions": {
+    "UserPatronProfile": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "course": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "patronStandings": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "activePatron": {
+          "type": "string"
+        },
+        "activePatronLastChanged": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "patronStandings",
+        "activePatron"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

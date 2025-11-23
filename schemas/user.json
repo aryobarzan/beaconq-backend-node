@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "user.json",
+  "definitions": {
+    "SecretQuestion": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "question",
+        "answer"
+      ],
+      "additionalProperties": false
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "STUDENT",
+            "TEACHER"
+          ]
+        },
+        "secretQuestions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SecretQuestion"
+          }
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "username",
+        "password",
+        "role",
+        "date"
+      ],
+      "additionalProperties": false
+    },
+    "UserMethods": {
+      "type": "object",
+      "additionalProperties": false
+    }
+  }
+}

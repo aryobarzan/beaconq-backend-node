@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "beaconResource.json",
+  "definitions": {
+    "BeaconResourceSection": {
+      "type": "object",
+      "properties": {
+        "sectionType": {
+          "type": "string"
+        },
+        "videoLinks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "type": "string"
+        },
+        "imageIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dartBlockProgram": {
+          "type": "object"
+        },
+        "code": {
+          "type": "string"
+        },
+        "codeLanguage": {
+          "type": "string"
+        },
+        "editable": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "sectionType"
+      ],
+      "additionalProperties": false
+    },
+    "BeaconResource": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BeaconResourceSection"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "availableFrom": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resourceType": {
+          "type": "string"
+        },
+        "resourceUUID": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "title",
+        "resourceType",
+        "resourceUUID"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

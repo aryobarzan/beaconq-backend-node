@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "activityUserInteraction.json",
+  "definitions": {
+    "ActivityUserInteraction": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "activity": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "viewedHints",
+            "viewedPointers"
+          ]
+        },
+        "content": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "activity",
+        "activityVersion",
+        "type",
+        "timestamp",
+        "serverTimestamp"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

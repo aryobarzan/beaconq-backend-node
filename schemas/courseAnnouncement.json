@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "courseAnnouncement.json",
+  "definitions": {
+    "CourseAnnouncement": {
+      "type": "object",
+      "properties": {
+        "course": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "author": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "title": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "dateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "courseSessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Types.ObjectId"
+          }
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Types.ObjectId"
+          }
+        },
+        "version": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "course",
+        "author",
+        "title",
+        "message",
+        "version"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

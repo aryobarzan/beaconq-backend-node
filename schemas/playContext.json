@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "playContext.json",
+  "definitions": {
+    "PlayContext": {
+      "type": "object",
+      "properties": {
+        "contextId": {
+          "type": "string"
+        },
+        "user": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "playType": {
+          "type": "string",
+          "enum": [
+            "trialQuiz",
+            "scheduledQuiz",
+            "review",
+            "challengeReview",
+            "test",
+            "unlock"
+          ]
+        },
+        "descriptor": {
+          "type": "string"
+        },
+        "activities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Types.ObjectId"
+          }
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Types.ObjectId"
+          }
+        },
+        "course": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "courseSessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Types.ObjectId"
+          }
+        },
+        "scheduledQuiz": {
+          "$ref": "#/definitions/Types.ObjectId"
+        },
+        "logAnswers": {
+          "type": "boolean"
+        },
+        "logActivityUserInteractions": {
+          "type": "boolean"
+        },
+        "logActivityFeedbackViews": {
+          "type": "boolean"
+        },
+        "additionalActivities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Types.ObjectId"
+          }
+        },
+        "reviewOptions": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "patron": {
+          "type": "string"
+        },
+        "userSelfPredictedPerformance": {
+          "type": "number"
+        },
+        "userEstimatedRetrievability": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "contextId",
+        "user",
+        "playType",
+        "activities",
+        "logAnswers",
+        "logActivityUserInteractions",
+        "logActivityFeedbackViews",
+        "additionalActivities"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
