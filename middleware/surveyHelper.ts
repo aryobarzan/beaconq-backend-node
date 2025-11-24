@@ -1,21 +1,25 @@
-var ActivityUserAnswer = require("../models/logs/activityUserAnswer");
-var mongoose = require("mongoose");
-var ModelHelper = require("../middleware/modelHelper");
-const { DateTime } = require("luxon");
-const SurveyAnswer = require("../models/logs/surveyAnswer");
-const logger = require("../middleware/logger");
+import mongoose from "mongoose";
+import ModelHelper from "../middleware/modelHelper";
+import { DateTime } from "luxon";
+import { SurveyAnswerModel } from "../models/logs/surveyAnswer";
+import logger from "../middleware/logger";
+import { ScheduledQuizDocument } from "../models/scheduledQuiz";
+import { ActivityUserAnswerModel } from "../models/logs/activityUserAnswer";
 
-var functions = {
+const functions = {
   // Check if the user has already answered the given scheduledQuiz' (mongoose object) survey.
   // If not, compute the set of questions the user should be answering, assuming they are still within the allowed survey period.
 
   // Note: this function contains a lot of hard-coded questions. In recent versions, the survey questions are directly stored as part of a ScheduledQuiz document.
   // However, for backward-compatibility with older client versions, the hardcoded questions are retained.
-  checkScheduledQuizSurveyUserStatus: async function (userId, scheduledQuiz) {
+  checkScheduledQuizSurveyUserStatus: async function (
+    userId: string,
+    scheduledQuiz: ScheduledQuizDocument,
+  ) {
     try {
-      const surveyAnswer = await SurveyAnswer.findOne({
-        scheduledQuiz: mongoose.Types.ObjectId(scheduledQuiz._id),
-        user: mongoose.Types.ObjectId(userId),
+      const surveyAnswer = await SurveyAnswerModel.findOne({
+        scheduledQuiz: scheduledQuiz._id,
+        user: new mongoose.Types.ObjectId(userId),
       }).exec();
       // User has answered survey
       if (surveyAnswer) {
@@ -26,7 +30,9 @@ var functions = {
         };
       }
 
-      const result = await ModelHelper.findCourseAndSession(scheduledQuiz._id);
+      const result = await ModelHelper.findCourseAndSession(
+        scheduledQuiz._id.toString(),
+      );
       if (!result || !result["course"] || !result["courseSession"]) {
         return {
           err: new Error("Course not found."),
@@ -34,7 +40,7 @@ var functions = {
           existingSurveyAnswer: null,
         };
       }
-      const quiz = await ModelHelper.findQuiz(scheduledQuiz.quiz);
+      const quiz = await ModelHelper.findQuiz(scheduledQuiz.quiz.toString());
       if (!quiz) {
         return {
           err: new Error("Quiz not found."),
@@ -91,16 +97,15 @@ var functions = {
           ).setZone("utc");
           if (otherQuizStartDateTime < scheduledQuizStartDateTime) {
             isFirstPostQuiz = false;
-            const userAnswers = await ActivityUserAnswer.base
-              .find({
-                scheduledQuiz: mongoose.Types.ObjectId(otherScheduledQuiz._id),
-                user: mongoose.Types.ObjectId(userId),
-              })
+            const userAnswers = await ActivityUserAnswerModel.find({
+              scheduledQuiz: otherScheduledQuiz._id,
+              user: new mongoose.Types.ObjectId(userId),
+            })
               .lean()
               .exec();
 
             const otherQuiz = await ModelHelper.findQuiz(
-              otherScheduledQuiz.quiz,
+              otherScheduledQuiz.quiz.toString(),
             );
             const activitiesCount =
               otherQuiz && Array.isArray(otherQuiz.activities)
@@ -130,7 +135,14 @@ var functions = {
           return aStartMs - bStartMs;
         },
       );
-      let questions = [
+      let questions: Array<{
+        question: string;
+        questionType: string;
+        isMultipleChoice?: boolean;
+        min?: number;
+        max?: number;
+        choices?: Array<string>;
+      }> = [
         {
           question: "How difficult did you find the quiz?",
           questionType: "numericRange",
@@ -209,10 +221,10 @@ var functions = {
         }
         // Subsequent post-quiz (2nd, 3rd, ...)
         else {
-          var previouslyPlayedQuiz = null;
+          let previouslyPlayedQuiz = null;
           if (precedingQuizAnswerPercentages.length > 0) {
             for (
-              var k = precedingQuizAnswerPercentages.length - 1;
+              let k = precedingQuizAnswerPercentages.length - 1;
               k >= 0;
               k--
             ) {
@@ -500,11 +512,11 @@ var functions = {
         questions: null,
         existingSurveyAnswer: null,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return { err: err, questions: null, existingSurveyAnswer: null };
     }
   },
 };
 
-module.exports = functions;
+export default functions;
