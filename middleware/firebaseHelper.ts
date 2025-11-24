@@ -1,14 +1,14 @@
-const firebaseAdmin = require("firebase-admin");
-const { DateTime } = require("luxon");
-var Course = require("../models/course");
-const logger = require("./logger");
-const nodeSchedule = require("node-schedule");
-var mongoose = require("mongoose");
+import firebaseAdmin from "firebase-admin";
+import { DateTime } from "luxon";
+import { CourseDocument, CourseModel } from "../models/course";
+import logger from "./logger";
+import nodeSchedule from "node-schedule";
+import mongoose from "mongoose";
 
 async function shutdown() {
   try {
     await nodeSchedule.gracefulShutdown();
-  } catch (err) {
+  } catch (err: unknown) {
     // do nothing
   }
 }
@@ -17,42 +17,39 @@ async function setupNotifications() {
   try {
     await nodeSchedule.gracefulShutdown();
     logger.info("[Setup] Cancelled all push notification jobs.");
-    const courses = await Course.find().exec();
+    const courses = await CourseModel.find().exec();
     if (courses) {
       for (let course of courses) {
         scheduleJobsForCourseScheduledQuizzes(course);
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error(
       "Failed to cancel all push notification jobs or to fetch courses: " + err,
     );
   }
 }
 
-async function refreshCourseNotifications(courseId) {
+async function refreshCourseNotifications(courseId: mongoose.Types.ObjectId) {
   logger.info("Refresh push notifications for course " + courseId);
   for (const [key, _] of Object.entries(nodeSchedule.scheduledJobs)) {
-    if (key.includes(courseId)) {
+    if (key.includes(courseId.toString())) {
       nodeSchedule.cancelJob(key);
     }
   }
   try {
-    const course = await Course.findById(
-      mongoose.Types.ObjectId(courseId),
-    ).exec();
+    const course = await CourseModel.findById(courseId).exec();
     if (course) {
       scheduleJobsForCourseScheduledQuizzes(course);
     }
-  } catch (err) {
-    logger.error("Failed to refresh course notifications", {
-      courseId: courseId,
-      err: err,
-    });
+  } catch (err: unknown) {
+    logger.error(
+      `Failed to refresh course notifications for course ${courseId}: ${err}`,
+    );
   }
 }
 
-async function scheduleJobsForCourseScheduledQuizzes(course) {
+async function scheduleJobsForCourseScheduledQuizzes(course: CourseDocument) {
   if (!course || !Array.isArray(course.sessions)) return;
 
   const currentDate = DateTime.now().setZone("utc");
@@ -115,25 +112,23 @@ async function scheduleJobsForCourseScheduledQuizzes(course) {
 
             try {
               const response = await firebaseAdmin.messaging().send(message);
-              logger.info("Successfully sent push notification:", { response });
-            } catch (error) {
-              logger.error("Error sending message:", { error });
+              logger.info(`Successfully sent push notification: ${response}`);
+            } catch (err: unknown) {
+              logger.error(`Error sending message: ${err}`);
             }
-          } catch (err) {
-            logger.error("Unhandled error in scheduled push job", {
-              err,
-              jobName,
-            });
+          } catch (err: unknown) {
+            logger.error(
+              `Unhandled error in scheduled push job ${jobName}: ${err}`,
+            );
           }
         });
-      } catch (err) {
-        logger.error("Failed to schedule push notification job", {
-          err,
-          jobName,
-        });
+      } catch (err: unknown) {
+        logger.error(
+          `Failed to schedule push notification job ${jobName}: ${err}`,
+        );
       }
     }
   }
 }
 
-module.exports = { shutdown, setupNotifications, refreshCourseNotifications };
+export default { shutdown, setupNotifications, refreshCourseNotifications };
