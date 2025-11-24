@@ -1,46 +1,50 @@
-const ActivityUserAnswer = require("../models/logs/activityUserAnswer");
-const PlayContext = require("../models/logs/playContext");
-const mongoose = require("mongoose");
-const ScheduledQuizUserStart = require("../models/logs/scheduledQuizUserStart");
-const SurveyAnswer = require("../models/logs/surveyAnswer");
-const logger = require("../middleware/logger");
+import mongoose from "mongoose";
+import { ActivityUserAnswerModel } from "../models/logs/activityUserAnswer";
+import { PlayContextModel } from "../models/logs/playContext";
+import { ScheduledQuizUserStartModel } from "../models/logs/scheduledQuizUserStart";
+import { SurveyAnswerModel } from "../models/logs/surveyAnswer";
+import logger from "../middleware/logger";
+import { Response } from "express";
 
 // Possible status codes
-const GetLogsForScheduledQuizzesStatus = Object.freeze({
-  Retrieved: 200,
-  MissingArguments: 400,
-  // InvalidScheduledQuizId: 452,
-  // PlayPeriodOver: 455,
-  // AlreadyPlayedAllActivities: 209,
-  // NotYetAvailable: 210,
-  InternalError: 500,
-});
-const GetSurveyAnswersForScheduledQuizStatus = Object.freeze({
-  Retrieved: 200,
-  MissingArguments: 400,
-  InternalError: 500,
-});
-const GetTrialQuizAnswersStatus = Object.freeze({
-  Retrieved: 200,
-  MissingArguments: 400,
-  InternalError: 500,
-});
-const GetActivityUserAnswersStatus = Object.freeze({
-  Retrieved: 200,
-  MissingArguments: 400,
-  InternalError: 500,
-});
+enum GetLogsForScheduledQuizzesStatus {
+  Retrieved = 200,
+  MissingArguments = 400,
+  // InvalidScheduledQuizId = 452,
+  // PlayPeriodOver = 455,
+  // AlreadyPlayedAllActivities = 209,
+  // NotYetAvailable = 210,
+  InternalError = 500,
+}
+enum GetSurveyAnswersForScheduledQuizStatus {
+  Retrieved = 200,
+  MissingArguments = 400,
+  InternalError = 500,
+}
+enum GetTrialQuizAnswersStatus {
+  Retrieved = 200,
+  MissingArguments = 400,
+  InternalError = 500,
+}
+enum GetActivityUserAnswersStatus {
+  Retrieved = 200,
+  MissingArguments = 400,
+  InternalError = 500,
+}
 
-var functions = {
+const functions = {
   // Check status of scheduled quizzes
-  getLogsForScheduledQuizzes: async function (req, res) {
-    if (req.token.role !== "TEACHER") {
+  getLogsForScheduledQuizzes: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { scheduledQuizIds: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
           "Failed to retrieve log data for scheduled quizzes: teachers only.",
       });
     }
-    if (!req.body.scheduledQuizIds || req.body.scheduledQuizIds.length === 0) {
+    if (!req.body.scheduledQuizIds) {
       return res
         .status(GetLogsForScheduledQuizzesStatus.MissingArguments)
         .send({
@@ -48,14 +52,29 @@ var functions = {
             "Failed to retrieve log data for scheduled quizzes: missing quiz IDs.",
         });
     }
+    let scheduledQuizIdsRaw: any;
+    try {
+      scheduledQuizIdsRaw = JSON.parse(req.body.scheduledQuizIds);
+    } catch (err: unknown) {
+      return res
+        .status(GetLogsForScheduledQuizzesStatus.MissingArguments)
+        .send({
+          message:
+            "Failed to retrieve log data for scheduled quizzes: invalid quiz IDs.",
+        });
+    }
+
     const scheduledQuizIds = [];
-    for (const id of req.body.scheduledQuizIds) {
-      try {
-        scheduledQuizIds.push(mongoose.Types.ObjectId(id));
-      } catch (_) {
-        // We just skip invalid IDs
+    if (Array.isArray(scheduledQuizIdsRaw)) {
+      for (const id of scheduledQuizIdsRaw) {
+        try {
+          scheduledQuizIds.push(new mongoose.Types.ObjectId(String(id)));
+        } catch (_) {
+          // We just skip invalid IDs
+        }
       }
     }
+
     if (scheduledQuizIds.length === 0) {
       return res
         .status(GetLogsForScheduledQuizzesStatus.MissingArguments)
@@ -66,17 +85,16 @@ var functions = {
     }
     try {
       // Promise 1
-      const userAnswersPromise = ActivityUserAnswer.base
-        .find({
-          scheduledQuiz: {
-            $in: scheduledQuizIds,
-          },
-        })
+      const userAnswersPromise = ActivityUserAnswerModel.find({
+        scheduledQuiz: {
+          $in: scheduledQuizIds,
+        },
+      })
         .populate("user", "username role")
         .lean()
         .exec();
       // Promise 2
-      const quizUserStartsPromise = ScheduledQuizUserStart.find({
+      const quizUserStartsPromise = ScheduledQuizUserStartModel.find({
         scheduledQuiz: {
           $in: scheduledQuizIds,
         },
@@ -120,7 +138,7 @@ var functions = {
         results,
         message: "Retrieved logs for scheduled quizzes.",
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       res.status(GetLogsForScheduledQuizzesStatus.InternalError).send({
         message:
@@ -128,8 +146,11 @@ var functions = {
       });
     }
   },
-  getSurveyAnswersForScheduledQuiz: async function (req, res) {
-    if (req.token.role !== "TEACHER") {
+  getSurveyAnswersForScheduledQuiz: async function (
+    req: Express.AuthenticatedRequest<{ scheduledQuizId: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
           "Failed to retrieve log data for scheduled quiz: teachers only.",
@@ -170,8 +191,8 @@ var functions = {
     ]);
 
     try {
-      const surveyAnswers = await SurveyAnswer.find({
-        scheduledQuiz: mongoose.Types.ObjectId(req.params.scheduledQuizId),
+      const surveyAnswers = await SurveyAnswerModel.find({
+        scheduledQuiz: new mongoose.Types.ObjectId(req.params.scheduledQuizId),
       })
         .populate("user", "username role")
         .lean()
@@ -196,7 +217,7 @@ var functions = {
         surveyAnswers: surveyAnswers,
         message: "Retrieved survey answers for scheduled quiz.",
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res
         .status(GetSurveyAnswersForScheduledQuizStatus.InternalError)
@@ -206,8 +227,11 @@ var functions = {
         });
     }
   },
-  getTrialQuizAnswers: async function (req, res) {
-    if (req.token.role !== "TEACHER") {
+  getTrialQuizAnswers: async function (
+    req: Express.AuthenticatedRequest<{ courseId: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Failed to retrieve log data for trial quiz: teachers only.",
       });
@@ -217,10 +241,10 @@ var functions = {
         message: "Failed to retrieve trial quiz answers: missing argument.",
       });
     }
-    let courseId;
+    let courseId: mongoose.Types.ObjectId;
     try {
-      courseId = mongoose.Types.ObjectId(req.params.courseId);
-    } catch (err) {
+      courseId = new mongoose.Types.ObjectId(req.params.courseId);
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetTrialQuizAnswersStatus.MissingArguments).send({
         message:
@@ -228,7 +252,7 @@ var functions = {
       });
     }
     try {
-      const playContexts = await PlayContext.find({
+      const playContexts = await PlayContextModel.find({
         course: courseId,
         playType: "trialQuiz",
       })
@@ -242,8 +266,9 @@ var functions = {
         });
       }
       const playContextIds = playContexts.map((element) => element.contextId);
-      const userAnswers = await ActivityUserAnswer.base
-        .find({ playContextId: { $in: playContextIds } })
+      const userAnswers = await ActivityUserAnswerModel.find({
+        playContextId: { $in: playContextIds },
+      })
         .lean()
         .exec();
       if (!userAnswers || userAnswers.length === 0) {
@@ -253,37 +278,38 @@ var functions = {
         });
         return;
       }
-      const result = await ActivityUserAnswer.base.populate(userAnswers, [
+      const result = await ActivityUserAnswerModel.populate(userAnswers, [
         { path: "user", select: { username: 1, role: 1 } },
       ]);
       return res.status(GetTrialQuizAnswersStatus.Retrieved).send({
         message: "Answers found for trial quiz.",
         answers: result,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetTrialQuizAnswersStatus.InternalError).send({
         message: "An error occurred retrieving trial quiz answers. (ERR2)",
       });
     }
   },
-  getActivityUserAnswers: async function (req, res) {
+  getActivityUserAnswers: async function (
+    req: Express.AuthenticatedRequest<{ courseId: string }>,
+    res: Response,
+  ) {
     if (!req.params.courseId) {
-      res.status(GetActivityUserAnswersStatus.MissingArguments).send({
+      return res.status(GetActivityUserAnswersStatus.MissingArguments).send({
         message: "Failed to retrieve activity answers: missing argument.",
       });
-      return;
     }
-    let courseId;
+    let courseId: mongoose.Types.ObjectId;
     try {
-      courseId = mongoose.Types.ObjectId(req.params.courseId);
-    } catch (err) {
+      courseId = new mongoose.Types.ObjectId(req.params.courseId);
+    } catch (err: unknown) {
       logger.error(err);
-      res.status(GetActivityUserAnswersStatus.MissingArguments).send({
+      return res.status(GetActivityUserAnswersStatus.MissingArguments).send({
         message:
           "Failed to retrieve activity answers: missing argument. (ERR1)",
       });
-      return;
     }
 
     try {
@@ -296,32 +322,32 @@ var functions = {
       //    - virtual properties
       //    - getters, setters
       // The third optimization also helps to significantly reduce the memory usage.
-      const userAnswers = await ActivityUserAnswer.base
-        .find({ courseContext: courseId })
+      const userAnswers = await ActivityUserAnswerModel.find({
+        courseContext: courseId,
+      })
         .populate("user", "username role")
         .lean()
         .exec();
 
       if (!userAnswers || userAnswers.length === 0) {
-        res.status(GetActivityUserAnswersStatus.Retrieved).send({
+        return res.status(GetActivityUserAnswersStatus.Retrieved).send({
           message: "No answers found.",
           answers: [],
         });
-        return;
       }
       // When we send the data to the client using res.send(...), userAnswers will automatically have JSON.stringify() applied to it.
       // In particular, because we used lean() earlier, this serialization will be much faster due to the plain JavaScript objects we're working with here.
-      res.status(GetActivityUserAnswersStatus.Retrieved).send({
+      return res.status(GetActivityUserAnswersStatus.Retrieved).send({
         message: "Answers found.",
         answers: userAnswers,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
-      res.status(GetActivityUserAnswersStatus.InternalError).send({
+      return res.status(GetActivityUserAnswersStatus.InternalError).send({
         message: "An error occurred retrieving answers.",
       });
     }
   },
 };
 
-module.exports = functions;
+export default functions;
