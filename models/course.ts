@@ -6,7 +6,7 @@ import {
   BeaconResource,
 } from "./beaconResource";
 import { DateTime } from "luxon";
-import { ScheduledQuiz } from "./scheduledQuiz";
+import { ScheduledQuiz, ScheduledQuizDocument } from "./scheduledQuiz";
 
 export interface Course {
   title: string;
@@ -27,9 +27,9 @@ export interface Course {
 // instance (non-static) methods
 export interface CourseMethods {
   getSessionOfScheduledQuiz(id: Types.ObjectId): CourseSession | null;
-  getScheduledQuiz(id: Types.ObjectId): ScheduledQuiz | null;
-  getScheduledQuizzes(): ScheduledQuiz[];
-  getInitialEvaluationQuiz(): ScheduledQuiz | null;
+  getScheduledQuiz(id: Types.ObjectId): ScheduledQuizDocument | null;
+  getScheduledQuizzes(): ScheduledQuizDocument[];
+  getInitialEvaluationQuiz(): ScheduledQuizDocument | null;
   getScheduledQuizType(id: Types.ObjectId): "pre" | "immediate" | "post" | null;
 }
 

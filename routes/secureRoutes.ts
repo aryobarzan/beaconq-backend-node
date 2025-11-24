@@ -8,6 +8,8 @@ import activityActions from "../methods/data/activityActions";
 import fsrsActions from "../methods/data/fsrsActions";
 import ebisuActions from "../methods/data/ebisuActions";
 import playActions from "../methods/playActions";
+import userActivityLogActions from "../methods/userLog/activityLogActions";
+import userOtherLogActions from "../methods/userLog/otherLogActions";
 import imageActions from "../methods/imageActions";
 import updateActions from "../methods/data/updateActions";
 import otherActions from "../methods/otherActions";
@@ -144,8 +146,6 @@ router.get(
   courseAnnouncementActions.getCourseAnnouncementsForCourses,
 );
 
-
-
 // ============================================================
 // Image Routes
 // ============================================================
@@ -171,8 +171,14 @@ router.delete("/gallery/images", imageActions.deleteGalleryImages);
 // ============================================================
 
 router.post("/play/scheduledQuiz", playActions.playScheduledQuiz);
-router.post("/play/logActivityUserAnswer", playActions.logActivityUserAnswer);
-router.post("/play/logActivityUserAnswers", playActions.logActivityUserAnswers);
+router.post(
+  "/play/logActivityUserAnswer",
+  userActivityLogActions.logActivityUserAnswer,
+);
+router.post(
+  "/play/logActivityUserAnswers",
+  userActivityLogActions.logActivityUserAnswers,
+);
 router.get("/play/scheduledQuizzes", playActions.checkScheduledQuizzes);
 router.get(
   "/play/scheduledQuiz/:scheduledQuizId/",
@@ -221,13 +227,19 @@ router.get("/updates/topics", updateActions.checkForTopicUpdates);
 
 router.post(
   "/log/activityUserInteraction",
-  playActions.logActivityUserInteraction,
+  userActivityLogActions.logActivityUserInteraction,
 );
-router.post("/log/activityFeedbackView", playActions.logActivityFeedbackView);
-router.post("/log/appInteraction", playActions.logAppInteraction);
-router.post("/log/appUserInteraction", playActions.logAppUserInteraction);
-router.post("/log/surveyAnswer", playActions.logSurveyAnswer);
-router.post("/log/playContext", playActions.logPlayContext);
+router.post(
+  "/log/activityFeedbackView",
+  userActivityLogActions.logActivityFeedbackView,
+);
+router.post("/log/appInteraction", userOtherLogActions.logAppInteraction);
+router.post(
+  "/log/appUserInteraction",
+  userOtherLogActions.logAppUserInteraction,
+);
+router.post("/log/surveyAnswer", userOtherLogActions.logSurveyAnswer);
+router.post("/log/playContext", userOtherLogActions.logPlayContext);
 
 // ============================================================
 // Feedback Routes

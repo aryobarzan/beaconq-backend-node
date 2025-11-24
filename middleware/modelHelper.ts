@@ -40,16 +40,17 @@ import {
   AppFeedbackModel,
   AppFeedbackDocument,
 } from "../models/logs/appFeedback";
+import { AchievementModel, AchievementDocument } from "../models/achievement";
 import {
-  model as AchievementModel,
-  AchievementDocument,
-} from "../models/achievement";
-import {
-  model as UserAchievementModel,
+  UserAchievementModel,
   UserAchievementDocument,
 } from "../models/userAchievement";
 import mongoose from "mongoose";
 import logger from "./logger";
+import {
+  ActivityUserInteractionDocument,
+  ActivityUserInteractionModel,
+} from "../models/logs/activityUserInteraction";
 
 const functions = {
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
@@ -267,7 +268,7 @@ const functions = {
       } else {
         logger.error("Activity creation failed: Unknown activity type.");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
     }
     return activity;
@@ -330,7 +331,7 @@ const functions = {
           "Activity answer logging failed: Unknown activity answer type.",
         );
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
     }
     return activityUserAnswer;
@@ -361,17 +362,35 @@ const functions = {
       } else {
         logger.error("Activity feedback view decoding failed: Unknown kind.");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
     }
     return activityFeedbackView;
+  },
+
+  decodeActivityUserInteraction: function (
+    json: any,
+  ): ActivityUserInteractionDocument | null {
+    let activityUserInteraction: ActivityUserInteractionDocument | null = null;
+    if (!json) {
+      logger.error(
+        "Activity user interaction decoding failed: Invalid activity user interaction JSON.",
+      );
+      return null;
+    }
+    try {
+      activityUserInteraction = new ActivityUserInteractionModel(json);
+    } catch (err: unknown) {
+      logger.error(err);
+    }
+    return activityUserInteraction;
   },
 
   decodeAchievement: function (json: any): AchievementDocument | null {
     let achievement: AchievementDocument | null = null;
     try {
       achievement = new AchievementModel(json);
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
     }
     return achievement;
@@ -391,7 +410,7 @@ const functions = {
     let surveyAnswer: SurveyAnswerDocument | null = null;
     try {
       surveyAnswer = new SurveyAnswerModel(json);
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
     }
     return surveyAnswer;
@@ -411,7 +430,7 @@ const functions = {
     let appFeedback: AppFeedbackDocument | null = null;
     try {
       appFeedback = new AppFeedbackModel(json);
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
     }
     return appFeedback;
