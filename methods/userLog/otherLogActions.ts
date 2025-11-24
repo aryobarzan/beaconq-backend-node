@@ -151,7 +151,7 @@ const functions = {
           "Survey answer logging failed: missing survey answer parameter.",
       });
     }
-    let surveyAnswer: SurveyAnswerDocument;
+    let surveyAnswer: SurveyAnswerDocument | null;
     try {
       surveyAnswer = ModelHelper.decodeSurveyAnswer(
         JSON.parse(req.body.surveyAnswer),
@@ -210,7 +210,7 @@ const functions = {
         message: "Play context logging failed: parameter missing.",
       });
     }
-    let playContext: PlayContextDocument;
+    let playContext: PlayContextDocument | null;
     try {
       playContext = ModelHelper.decodePlayContext(
         JSON.parse(req.body.playContext),
@@ -230,14 +230,13 @@ const functions = {
 
     playContext.user = new mongoose.Types.ObjectId(req.token._id);
     var obj = playContext.toObject();
-    if (obj._id) {
-      delete obj._id;
-    }
+    // destructuring to get rid of _id property
+    const { _id, ...objWithoutId } = obj;
 
     try {
       const updateResult = await PlayContextModel.updateOne(
         { contextId: playContext.contextId },
-        obj,
+        objWithoutId,
         {
           upsert: true,
           runValidators: true,

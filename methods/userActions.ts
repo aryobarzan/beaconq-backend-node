@@ -57,6 +57,9 @@ enum UpdatePasswordStatus {
 }
 
 function generateTokenForUser(user: UserDocument): string {
+  if (!process.env.PRIVATE_KEY) {
+    throw new Error("No private key found.");
+  }
   return jwt.sign(user.toJSON(), process.env.PRIVATE_KEY, {
     algorithm: "RS256",
     expiresIn: "5y",

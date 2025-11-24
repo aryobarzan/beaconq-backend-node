@@ -217,7 +217,7 @@ const functions = {
         return session._id.toString() === courseSessionId.toString();
       })
       .pop();
-    return courseSession;
+    return courseSession ? courseSession : null;
   },
 
   /**
@@ -302,7 +302,7 @@ const functions = {
             "Converting old schema of activity user answer field 'answers' from Map to Array: " +
               JSON.stringify(json["answers"]),
           );
-          let answers = [];
+          let answers: { answer: string; evaluation: string }[] = [];
           for (let key in json["answers"]) {
             answers.push({ answer: key, evaluation: json["answers"][key] });
           }
@@ -317,7 +317,7 @@ const functions = {
             "Converting old schema of activity user answer field 'answers' from Map to Array: " +
               JSON.stringify(json["answers"]),
           );
-          let answers = [];
+          let answers: { answer: string; evaluation: string }[] = [];
           for (let key in json["answers"]) {
             answers.push({ answer: key, evaluation: json["answers"][key] });
           }

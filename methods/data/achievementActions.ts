@@ -2,8 +2,14 @@ import { Response } from "express";
 import ModelHelper from "../../middleware/modelHelper";
 import logger from "../../middleware/logger";
 import mongoose from "mongoose";
-import { AchievementModel } from "../../models/achievement";
-import { UserAchievementModel } from "../../models/userAchievement";
+import {
+  AchievementDocument,
+  AchievementModel,
+} from "../../models/achievement";
+import {
+  UserAchievementDocument,
+  UserAchievementModel,
+} from "../../models/userAchievement";
 
 // Possible status codes
 enum CreateAchievementsStatus {
@@ -74,8 +80,8 @@ const functions = {
       });
     }
 
-    const operations = [];
-    const decodeFailures = [];
+    const operations: { insertOne: { document: AchievementDocument } }[] = [];
+    const decodeFailures: { index: number; item: any }[] = [];
     for (let i = 0; i < achievementsRaw.length; i++) {
       const decoded = ModelHelper.decodeAchievement(achievementsRaw[i]);
       if (!decoded) {
@@ -179,13 +185,8 @@ const functions = {
       }
       // retain only valid course IDs
       courseIds = courseIdsRaw
-        .map((id) => {
-          if (!mongoose.isValidObjectId(id)) {
-            return null;
-          }
-          return new mongoose.Types.ObjectId(String(id));
-        })
-        .filter(Boolean);
+        .filter((id) => mongoose.isValidObjectId(id))
+        .map((id) => new mongoose.Types.ObjectId(String(id)));
     }
     let excludeGlobal =
       req.body.excludeGlobal === true ||
@@ -257,13 +258,8 @@ const functions = {
       }
       // retain only valid achievement IDs
       achievementIds = achievementIdsRaw
-        .map((id) => {
-          if (!mongoose.isValidObjectId(id)) {
-            return null;
-          }
-          return new mongoose.Types.ObjectId(String(id));
-        })
-        .filter(Boolean);
+        .filter((id) => mongoose.isValidObjectId(id))
+        .map((id) => new mongoose.Types.ObjectId(String(id)));
 
       // safety limit to avoid overloading database
       const MAX_BATCH = 200;
@@ -319,7 +315,7 @@ const functions = {
       });
     }
 
-    let receivedUserAchievements = [];
+    let receivedUserAchievements: UserAchievementDocument[] = [];
     for (let receivedUserAchievementRaw of receivedUserAchievementsRaw) {
       const userAchievement = ModelHelper.decodeUserAchievement(
         receivedUserAchievementRaw,
@@ -354,10 +350,21 @@ const functions = {
       });
     }
 
-    const operations = [];
+    const operations: {
+      updateOne: {
+        filter: {
+          $and: [
+            { achievement: mongoose.Types.ObjectId },
+            { user: mongoose.Types.ObjectId },
+          ];
+        };
+        update: { $set: any };
+        upsert: true;
+      };
+    }[] = [];
     for (let receivedUserAchievement of receivedUserAchievements) {
       let userAchievementObject = receivedUserAchievement.toObject();
-      delete userAchievementObject._id;
+      const { _id, ...userAchievementObjectWithoutId } = userAchievementObject;
       operations.push({
         updateOne: {
           filter: {
@@ -366,7 +373,7 @@ const functions = {
               { user: receivedUserAchievement.user },
             ],
           },
-          update: { $set: userAchievementObject }, // $set ensures only the given fields present in userAchievementObject are updated in the found document.
+          update: { $set: userAchievementObjectWithoutId }, // $set ensures only the given fields present in userAchievementObject are updated in the found document.
           upsert: true,
         },
       });

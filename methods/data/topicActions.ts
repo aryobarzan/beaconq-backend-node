@@ -58,7 +58,7 @@ const functions = {
       });
     }
 
-    let result: TopicDocument | null = null;
+    let result: TopicDocument | undefined;
     let responseStatusCode: number = CreateOrUpdateTopicStatus.Updated;
 
     try {
@@ -120,6 +120,10 @@ const functions = {
         return res.status(responseStatusCode).send({
           message: message,
           topic: result.toJSON(),
+        });
+      } else {
+        return res.status(CreateOrUpdateTopicStatus.InternalError).send({
+          message: "Topic creation/update failed: internal error.",
         });
       }
     } catch (err: unknown) {

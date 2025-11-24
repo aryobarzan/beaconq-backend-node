@@ -75,7 +75,7 @@ const functions = {
       });
     }
 
-    let result: ActivityDocument | null = null;
+    let result: ActivityDocument | undefined;
     let responseStatusCode: number = CreateOrUpdateActivityStatus.Updated;
     try {
       await session.withTransaction(async () => {
@@ -151,6 +151,10 @@ const functions = {
         return res.status(responseStatusCode).send({
           message: message,
           activity: result.toJSON(),
+        });
+      } else {
+        return res.status(CreateOrUpdateActivityStatus.InternalError).send({
+          message: "Activity creation/update failed: internal error.",
         });
       }
     } catch (err: unknown) {

@@ -3,7 +3,7 @@ import ModelHelper from "../middleware/modelHelper";
 import { DateTime } from "luxon";
 import { SurveyAnswerModel } from "../models/logs/surveyAnswer";
 import logger from "../middleware/logger";
-import { ScheduledQuizDocument } from "../models/scheduledQuiz";
+import { ScheduledQuiz, ScheduledQuizDocument } from "../models/scheduledQuiz";
 import { ActivityUserAnswerModel } from "../models/logs/activityUserAnswer";
 
 const functions = {
@@ -84,7 +84,10 @@ const functions = {
 
       /// TODO: temporary!
       const isFinalTestQuiz = quiz.title.toLowerCase().includes("final");
-      let precedingQuizAnswerPercentages = [];
+      let precedingQuizAnswerPercentages: Array<{
+        scheduledQuiz: ScheduledQuiz;
+        percentage: number;
+      }> = [];
       if (!isPreQuiz) {
         for (const otherScheduledQuiz of scheduledQuizzes) {
           if (
@@ -221,15 +224,21 @@ const functions = {
         }
         // Subsequent post-quiz (2nd, 3rd, ...)
         else {
-          let previouslyPlayedQuiz = null;
+          let previouslyPlayedQuiz:
+            | {
+                scheduledQuiz: ScheduledQuiz;
+                percentage: number;
+              }
+            | undefined;
           if (precedingQuizAnswerPercentages.length > 0) {
             for (
               let k = precedingQuizAnswerPercentages.length - 1;
               k >= 0;
               k--
             ) {
-              if (precedingQuizAnswerPercentages[k]["percentage"] > 0.0) {
-                previouslyPlayedQuiz = precedingQuizAnswerPercentages[k];
+              const precedingQuizData = precedingQuizAnswerPercentages[k];
+              if (precedingQuizData && precedingQuizData.percentage > 0.0) {
+                previouslyPlayedQuiz = precedingQuizData;
                 break;
               }
             }

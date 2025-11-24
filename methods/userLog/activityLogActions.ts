@@ -78,7 +78,7 @@ const functions = {
       });
     }
 
-    let decodedActivityUserAnswer: ActivityUserAnswerDocument;
+    let decodedActivityUserAnswer: ActivityUserAnswerDocument | null;
     try {
       decodedActivityUserAnswer = ModelHelper.decodeActivityUserAnswer(
         JSON.parse(req.body.activityUserAnswer),
@@ -221,7 +221,7 @@ const functions = {
 
     try {
       let insertedCount = 0;
-      const alreadyLoggedAnswerTimestamps = [];
+      const alreadyLoggedAnswerTimestamps: Date[] = [];
 
       await session.withTransaction(async () => {
         for (const activityUserAnswer of activityUserAnswers) {
@@ -317,7 +317,7 @@ const functions = {
         });
     }
 
-    let activityUserInteraction: ActivityUserInteractionDocument;
+    let activityUserInteraction: ActivityUserInteractionDocument | null;
     try {
       activityUserInteraction = ModelHelper.decodeActivityUserInteraction(
         JSON.parse(req.body.activityUserInteraction),

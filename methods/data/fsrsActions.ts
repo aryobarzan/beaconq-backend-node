@@ -66,7 +66,7 @@ const functions = {
           /// updateOne operation expects JS object or string, NOT mongoose object!
           let updatedFSRSModel = fsrsModel.toObject();
           /// updateOne breaks with _id included in document as it is an immutable field
-          delete updatedFSRSModel._id;
+          const { _id, ...updatedFSRSModelWithoutId } = updatedFSRSModel;
           operations.push({
             updateOne: {
               filter: {
@@ -81,7 +81,7 @@ const functions = {
                   },
                 ],
               },
-              update: updatedFSRSModel,
+              update: updatedFSRSModelWithoutId,
             },
           });
         } else {

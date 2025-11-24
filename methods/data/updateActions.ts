@@ -97,7 +97,7 @@ const functions = {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(course._id))) continue;
         const clientVersion = clientVersionById.get(String(course._id));
-        if (clientVersion < course.version) {
+        if (clientVersion && clientVersion < course.version) {
           coursesToUpdate.push(course);
         }
       }
@@ -185,7 +185,7 @@ const functions = {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(quiz._id))) continue;
         const clientVersion = clientVersionById.get(String(quiz._id));
-        if (clientVersion < quiz.version) {
+        if (clientVersion && clientVersion < quiz.version) {
           quizzesToUpdate.push(quiz);
         }
       }
@@ -275,7 +275,7 @@ const functions = {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(activity._id))) continue;
         const clientVersion = clientVersionById.get(String(activity._id));
-        if (clientVersion < activity.version) {
+        if (clientVersion && clientVersion < activity.version) {
           activitiesToUpdate.push(activity);
         }
       }
@@ -354,7 +354,7 @@ const functions = {
         // do not do !clientVersion: this would include the valid value 0!
         if (!clientVersionById.has(String(topic._id))) continue;
         const clientVersion = clientVersionById.get(String(topic._id));
-        if (clientVersion < topic.version) {
+        if (clientVersion && clientVersion < topic.version) {
           topicsToUpdate.push(topic);
         }
       }

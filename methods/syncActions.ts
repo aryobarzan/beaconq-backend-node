@@ -1,8 +1,11 @@
-import mongoose from "mongoose";
+import mongoose, { FlattenMaps } from "mongoose";
 import { DateTime } from "luxon";
 import logger from "../middleware/logger";
-import { FSRSModel } from "../models/fsrsModel";
-import { ActivityUserAnswerModel } from "../models/logs/activityUserAnswer";
+import { FSRSDocument, FSRSModel } from "../models/fsrsModel";
+import {
+  ActivityUserAnswerDocument,
+  ActivityUserAnswerModel,
+} from "../models/logs/activityUserAnswer";
 import { Response } from "express";
 
 // Possible status codes
@@ -41,7 +44,7 @@ const functions = {
     try {
       const userId = new mongoose.Types.ObjectId(req.token._id);
       const fsrsModelsJSON = JSON.parse(req.body.fsrsModels);
-      const fsrsModels = [];
+      const fsrsModels: FSRSDocument[] = [];
 
       for (let i in fsrsModelsJSON) {
         fsrsModelsJSON[i]["user"] = userId;
@@ -53,7 +56,7 @@ const functions = {
       }
 
       // Optimization: only fetch FSRS models for the given data IDS (activity / topic)
-      let dataIds = [];
+      let dataIds: mongoose.Types.ObjectId[] = [];
       if (req.body.dataIds) {
         try {
           const dataIdsRaw = JSON.parse(req.body.dataIds);
@@ -78,8 +81,8 @@ const functions = {
 
       const dbFSRSModels = await FSRSModel.find(conditions).lean();
 
-      const fsrsModelsToUpdateOnServer = [];
-      const fsrsModelsToSendToClient = [];
+      const fsrsModelsToUpdateOnServer: FSRSDocument[] = [];
+      const fsrsModelsToSendToClient: FlattenMaps<FSRSDocument>[] = [];
       const clientModelsMap = new Map(
         fsrsModels.map((m) => [`${m.dataId}_${m.dataType}`, m]),
       );
@@ -113,7 +116,7 @@ const functions = {
         }
       }
 
-      const serverOperations = [];
+      const serverOperations: any[] = [];
       /// TODO: some code reuse possible with storeFSRSModels function in fsrsActions.js
 
       // All models from client not found in server database to be stored in server database
@@ -128,7 +131,7 @@ const functions = {
         // updateOne operation expects JS object or string, NOT mongoose object!
         const updatedFSRSModel = fsrsModel.toObject();
         // updateOne breaks with _id included in document as it is an immutable field
-        delete updatedFSRSModel._id;
+        const { _id, ...updatedFSRSModelWithoutId } = updatedFSRSModel;
 
         serverOperations.push({
           updateOne: {
@@ -137,7 +140,7 @@ const functions = {
               dataType: fsrsModel.dataType,
               user: userId,
             },
-            update: updatedFSRSModel,
+            update: updatedFSRSModelWithoutId,
           },
         });
       }
@@ -288,16 +291,19 @@ const functions = {
 
     let activityIds: mongoose.Types.ObjectId[] = Array.isArray(activityIdsRaw)
       ? activityIdsRaw
-          .map((a) =>
-            mongoose.isValidObjectId(a) ? new mongoose.Types.ObjectId(a) : null,
-          )
-          .filter(Boolean)
+          .filter((a) => mongoose.isValidObjectId(a))
+          .map((a) => new mongoose.Types.ObjectId(String(a)))
       : [];
 
     let activityUserAnswersRaw: any;
     try {
       activityUserAnswersRaw = JSON.parse(req.body.activityUserAnswers);
-    } catch (err: unknown) {}
+    } catch (err: unknown) {
+      return res.status(SyncActivityUserAnswersStatus.MissingArguments).send({
+        message:
+          "Activity user answers sync failed: missing argument (invalid json).",
+      });
+    }
     const activityUserAnswersArray: string[] = Array.isArray(
       activityUserAnswersRaw,
     )
@@ -340,7 +346,7 @@ const functions = {
           activityUserAnswers: [],
         });
       } else {
-        var filteredResult = [];
+        var filteredResult: ActivityUserAnswerDocument[] = [];
         for (let activityAnswer of result) {
           if (
             existingActivityAnswersDictionary.has(

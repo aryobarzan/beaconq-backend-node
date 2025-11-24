@@ -59,7 +59,7 @@ const functions = {
       });
     }
 
-    let result: QuizDocument | null = null;
+    let result: QuizDocument | undefined;
     let responseStatusCode: number = CreateOrUpdateQuizStatus.Updated;
     try {
       await session.withTransaction(async () => {
@@ -133,6 +133,10 @@ const functions = {
         return res.status(responseStatusCode).send({
           message: message,
           quiz: result.toJSON(),
+        });
+      } else {
+        return res.status(CreateOrUpdateQuizStatus.InternalError).send({
+          message: "Quiz creation/update failed: internal error.",
         });
       }
     } catch (err: unknown) {

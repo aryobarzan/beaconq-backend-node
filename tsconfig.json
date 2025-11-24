@@ -12,11 +12,11 @@
 
     // Type Checking - Progressive strictness (enable gradually)
     "noImplicitAny": false,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     "strictFunctionTypes": false,
     "strictBindCallApply": false,
     "strictPropertyInitialization": false,
-    "noImplicitThis": false,
+    "noImplicitThis": true,
     "alwaysStrict": true,
 
     // Additional Checks - Enable when ready

@@ -8,12 +8,13 @@ async function connectDB() {
   while (attempt < maxAttempts) {
     try {
       attempt++;
-      const conn = await mongoose.connect(process.env.MONGO_URI, {});
+      const conn = await mongoose.connect(process.env.MONGO_URI || "", {});
       logger.info(`MongoDB Connected: ${conn.connection.host}`);
 
       // create indexes for GridFS-related collections (images, gallery_images)
       try {
         const db = conn.connection.db;
+        if (!db) throw new Error("DB not found");
         const imageBucket = process.env.DATABASE_IMAGE_BUCKET || "images";
         const galleryBucket = process.env.GALLERY_BUCKET || "gallery_images";
 

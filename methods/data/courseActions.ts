@@ -102,7 +102,7 @@ const functions = {
     }
 
     let responseStatusCode: number = CreateOrUpdateCourseStatus.Updated;
-    let result: CourseDocument | null = null;
+    let result: CourseDocument | undefined;
 
     try {
       await session.withTransaction(async () => {
@@ -180,6 +180,10 @@ const functions = {
         return res.status(responseStatusCode).send({
           message: message,
           course: result.toJSON(),
+        });
+      } else {
+        return res.status(CreateOrUpdateCourseStatus.InternalError).send({
+          message: "Course creation/update failed: internal error.",
         });
       }
     } catch (err: unknown) {
@@ -293,10 +297,12 @@ const functions = {
       });
     }
     try {
-      let registrationResult: {
-        status: RegisterCourseStatus;
-        registration?: CourseRegistrationDocument;
-      };
+      let registrationResult:
+        | {
+            status: RegisterCourseStatus;
+            registration?: CourseRegistrationDocument;
+          }
+        | undefined;
       await session.withTransaction(async () => {
         // count active registrations for the course
         const registrationLimit = Math.max(1, course.registrationLimit || 1000);
@@ -374,6 +380,11 @@ const functions = {
         });
       }
       populatedCourse = populatedCourse as CourseDocument;
+      if (!registrationResult) {
+        return res.status(RegisterCourseStatus.InternalError).send({
+          message: "Course registration failed: internal error.",
+        });
+      }
       // Note: we don't send the CourseRegistration object as part of the response, as currently the client just expects the Course object itself.
       if (
         registrationResult.status === RegisterCourseStatus.AlreadyRegistered

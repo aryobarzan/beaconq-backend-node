@@ -127,7 +127,7 @@ const functions = {
       });
     }
     let responseData: any;
-    let responseStatus: number;
+    let responseStatus: number | undefined;
     try {
       await session.withTransaction(async () => {
         const userPatronProfile = await UserPatronProfileModel.findOne({
@@ -247,6 +247,14 @@ const functions = {
               userPatronProfile,
               userPatronProfile.activePatron,
             );
+            if (!patronCurrentStanding || !patronStandingUpdate) {
+              responseData = {
+                message: "User's Patron Profile update failed. [ERR103]",
+                userPatronProfile: userPatronProfile.toJSON(),
+              };
+              responseStatus = UpdateUserPatronProfileStatus.InternalError;
+              return;
+            }
 
             const updatedUserPatronProfile =
               await UserPatronProfileModel.findOneAndUpdate(

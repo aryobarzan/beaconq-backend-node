@@ -28,10 +28,10 @@ function getSafeLogDir(): string {
 
   // if relative path starts with '..' or is absolute, it is a path escape attempt! (dangerous)
   // NOTE: windows specific - if the path is on a different drive, it is absolute
-  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
     console.warn(
       `Path traversal attempt detected in LOG_DIR: "${process.env.LOG_DIR}". ` +
-      `Using default: "${defaultLogDir}"`
+        `Using default: "${defaultLogDir}"`,
     );
     return defaultLogDir;
   }
@@ -52,30 +52,30 @@ function getSafeLogFilename(): string {
   const requestedFilename = process.env.LOG_FILENAME;
 
   // check for path separators (unix and windows)
-  if (requestedFilename.includes('/') || requestedFilename.includes('\\')) {
+  if (requestedFilename.includes("/") || requestedFilename.includes("\\")) {
     console.warn(
       `Path separators detected in LOG_FILENAME: "${requestedFilename}". ` +
-      `Using default: "${defaultFilename}"`
+        `Using default: "${defaultFilename}"`,
     );
     return defaultFilename;
   }
 
   // check for directory traversal
-  if (requestedFilename.includes('..')) {
+  if (requestedFilename.includes("..")) {
     console.warn(
       `Directory traversal detected in LOG_FILENAME: "${requestedFilename}". ` +
-      `Using default: "${defaultFilename}"`
+        `Using default: "${defaultFilename}"`,
     );
     return defaultFilename;
   }
 
   // check for null byte injection.
-  // example: "file.log\0.txt" might be truncated to "file.log" due to the null byte \0 
+  // example: "file.log\0.txt" might be truncated to "file.log" due to the null byte \0
   // danger: bypass extension check
-  if (requestedFilename.includes('\0')) {
+  if (requestedFilename.includes("\0")) {
     console.warn(
       `Null byte detected in LOG_FILENAME: "${requestedFilename}". ` +
-      `Using default: "${defaultFilename}"`
+        `Using default: "${defaultFilename}"`,
     );
     return defaultFilename;
   }
@@ -83,17 +83,15 @@ function getSafeLogFilename(): string {
   // ensure filename is not empty after trimming
   const trimmedFilename = requestedFilename.trim();
   if (trimmedFilename.length === 0) {
-    console.warn(
-      `Empty LOG_FILENAME. Using default: "${defaultFilename}"`
-    );
+    console.warn(`Empty LOG_FILENAME. Using default: "${defaultFilename}"`);
     return defaultFilename;
   }
 
   // ensure filename ends with .log extension
-  if (!trimmedFilename.toLowerCase().endsWith('.log')) {
+  if (!trimmedFilename.toLowerCase().endsWith(".log")) {
     console.warn(
       `LOG_FILENAME must end with .log extension: "${trimmedFilename}". ` +
-      `Using default: "${defaultFilename}"`
+        `Using default: "${defaultFilename}"`,
     );
     return defaultFilename;
   }
@@ -111,9 +109,9 @@ const ROTATE_COMPRESS =
 const ROTATE_MAX_FILES = process.env.LOG_ROTATE_MAX_FILES || 10;
 
 // validation functions for rotating-file-stream configuration
-type SizeUnit = 'K' | 'M' | 'G' | 'B';
+type SizeUnit = "K" | "M" | "G" | "B";
 type ValidSize = `${number}${SizeUnit}`;
-type IntervalUnit = 's' | 'm' | 'h' | 'd';
+type IntervalUnit = "s" | "m" | "h" | "d";
 type ValidInterval = `${number}${IntervalUnit}`;
 
 function isValidSize(value: string): value is ValidSize {
@@ -135,20 +133,20 @@ try {
 // Validate configuration
 if (!isValidSize(ROTATE_SIZE)) {
   console.warn(
-    `Invalid ROTATE_SIZE format: "${ROTATE_SIZE}". Expected format: <number><K|M|G|B>. Using default: 10M`
+    `Invalid ROTATE_SIZE format: "${ROTATE_SIZE}". Expected format: <number><K|M|G|B>. Using default: 10M`,
   );
 }
 
 if (!isValidInterval(ROTATE_INTERVAL)) {
   console.warn(
-    `Invalid ROTATE_INTERVAL format: "${ROTATE_INTERVAL}". Expected format: <number><s|m|h|d>. Using default: 7d`
+    `Invalid ROTATE_INTERVAL format: "${ROTATE_INTERVAL}". Expected format: <number><s|m|h|d>. Using default: 7d`,
   );
 }
 
 const maxFiles = Number(ROTATE_MAX_FILES);
 if (isNaN(maxFiles) || maxFiles <= 0) {
   console.warn(
-    `Invalid ROTATE_MAX_FILES: "${ROTATE_MAX_FILES}". Must be a positive number. Using default: 10`
+    `Invalid ROTATE_MAX_FILES: "${ROTATE_MAX_FILES}". Must be a positive number. Using default: 10`,
   );
 }
 
@@ -194,13 +192,13 @@ if (!isProd) {
   // Fallback: create a logger that writes to stdout
   const pretty = pino.transport
     ? pino.transport({
-      target: "pino-pretty",
-      options: {
-        colorize: true,
-        translateTime: "SYS:standard",
-        ignore: "pid,hostname",
-      },
-    })
+        target: "pino-pretty",
+        options: {
+          colorize: true,
+          translateTime: "SYS:standard",
+          ignore: "pid,hostname",
+        },
+      })
     : undefined;
 
   if (pretty) {
@@ -222,8 +220,8 @@ function createHttpLogger(): HttpLogger {
   return pinoHttp({
     logger,
     customLogLevel: function (res, err) {
-      if (res.statusCode >= 500 || err) return "error";
-      if (res.statusCode >= 400) return "warn";
+      if ((res.statusCode && res.statusCode >= 500) || err) return "error";
+      if (res.statusCode && res.statusCode >= 400) return "warn";
       return "info";
     },
   });
@@ -235,7 +233,7 @@ function shutdownAndFlush(): Promise<void> {
       logger.info("Request logger shutting down, flushing logs...");
 
       // ensure all logs are written
-      if (typeof logger.flush === 'function') {
+      if (typeof logger.flush === "function") {
         logger.flush();
       }
 
@@ -245,7 +243,9 @@ function shutdownAndFlush(): Promise<void> {
         if (stream) {
           stream.end(() => {
             // don't use logger here anymore, we're closing it!
-            console.info("Request logger flushed and rotating file stream closed");
+            console.info(
+              "Request logger flushed and rotating file stream closed",
+            );
             resolve();
           });
         } else {

@@ -326,7 +326,18 @@ async function checkScheduledQuizzesUserStatus(
     >,
     batchSize: number = 20,
   ) {
-    const output = [];
+    const output: PromiseSettledResult<
+      | {
+          scheduledQuizId: mongoose.Types.ObjectId;
+          ok: boolean;
+          res: any;
+        }
+      | {
+          scheduledQuizId: mongoose.Types.ObjectId;
+          ok: boolean;
+          err: any;
+        }
+    >[] = [];
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
       const promises = batch.map((item) => fn(item));
@@ -359,29 +370,35 @@ async function checkScheduledQuizzesUserStatus(
       for (let i = 0; i < settledPromises.length; i++) {
         const item = settledPromises[i];
         const expectedSq = scheduledQuizzes[i];
-        if (item.status === "fulfilled") {
+        if (item && item.status === "fulfilled") {
           const payload = item.value;
           // Payload is { scheduledQuizId, ok: true, res }
           // In case of error: { scheduledQuizId, ok: false, err }
           if (
             payload &&
             payload.ok &&
+            "res" in payload &&
             payload.res &&
             payload.res.scheduledQuizId
           ) {
             statuses[payload.res.scheduledQuizId] = payload.res;
-          } else if (payload && payload.res && payload.res.isOld) {
+          } else if (
+            payload &&
+            "res" in payload &&
+            payload.res &&
+            payload.res.isOld
+          ) {
             // skip old scheduled quizzes
           } else {
             // Unexpected payload shape
             logger.error(
-              `Unexpected scheduled quiz status payload for scheduled quiz ${expectedSq._id} with payload: ${JSON.stringify(payload)}`,
+              `Unexpected scheduled quiz status payload for scheduled quiz ${expectedSq?._id} with payload: ${JSON.stringify(payload)}`,
             );
           }
         } else {
           // promise rejected: log with scheduledQuiz id and continue
           logger.error(
-            `Failed to check scheduled quiz status for scheduled quiz ${expectedSq._id}: ${item}`,
+            `Failed to check scheduled quiz status for scheduled quiz ${expectedSq?._id}: ${item}`,
           );
         }
       }
@@ -707,6 +724,14 @@ const functions = {
       const scheduledQuiz = await ModelHelper.findScheduledQuiz(
         req.params.scheduledQuizId,
       );
+      if (!scheduledQuiz) {
+        return res
+          .status(CheckScheduledQuizSurveyStatus.MissingArguments)
+          .send({
+            message:
+              "Can't check survey status: specified scheduled quiz could not be found.",
+          });
+      }
       const surveyStatus =
         await SurveyHelper.checkScheduledQuizSurveyUserStatus(
           req.token._id,

@@ -80,7 +80,8 @@ async function _storeBufferToGridFS(
   bucketName: string,
   file: Express.Multer.File,
   metadata = {},
-) {
+): Promise<Express.GridFSFileInfo | null> {
+  if (!mongoose.connection.db) return null;
   const bucket = new GridFSBucket(mongoose.connection.db, { bucketName });
   const filename = getUniqueFileName(file.originalname);
 
@@ -106,6 +107,27 @@ async function _storeBufferToGridFS(
   };
 }
 
+/**
+ * Helper function to replace req.files with GridFS metadata.
+ * This is type-safe because we're intentionally transforming the request
+ * after Multer has processed it, replacing File[] with our GridFS metadata.
+ */
+function setGridFSFiles(req: Request, files: Express.GridFSFileInfo[]): void {
+  (req as any).files = files;
+}
+
+/**
+ * Helper function to replace req.file with GridFS metadata.
+ * This is type-safe because we're intentionally transforming the request
+ * after Multer has processed it, replacing File with our GridFS metadata.
+ */
+function setGridFSFile(
+  req: Request,
+  file: Express.GridFSFileInfo | null,
+): void {
+  (req as any).file = file;
+}
+
 // promise-based handlers
 async function uploadFilesHandler(req: Request, res: Response) {
   // No try-catch: the caller shall handle the HTTP response
@@ -114,13 +136,14 @@ async function uploadFilesHandler(req: Request, res: Response) {
   // write each buffered file to GridFS and attach results to req.files
   if (!req.files || !Array.isArray(req.files) || req.files.length === 0) return;
 
-  const results = [];
+  const results: Express.GridFSFileInfo[] = [];
   for (const f of req.files) {
     const info = await _storeBufferToGridFS(DEFAULT_IMAGE_BUCKET, f, {});
+    if (!info) continue;
     results.push(info);
   }
-  // Replace req.files with an array of stored file info
-  req.files = results;
+  // Replace req.files with an array of stored file info using typed helper
+  setGridFSFiles(req, results);
   return;
 }
 
@@ -142,8 +165,8 @@ async function uploadGalleryImageHandler(
   if (caption) metadata.caption = caption.slice(0, 1000);
 
   const info = await _storeBufferToGridFS(GALLERY_BUCKET, req.file, metadata);
-  // TODO: verify if valid
-  (req.file as any) = info;
+  // Replace req.file with GridFS metadata using typed helper
+  setGridFSFile(req, info);
   return;
 }
 

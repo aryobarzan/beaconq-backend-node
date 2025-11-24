@@ -36,6 +36,11 @@ const downloadImage = async (
     return res.status(400).send({ message: "Error: Specify the image's id." });
   }
   try {
+    if (!mongoose.connection.db) {
+      return res.status(500).send({
+        message: "Failed to download image details. (ERR491)",
+      });
+    }
     const bucket = new GridFSBucket(mongoose.connection.db, {
       bucketName: process.env.DATABASE_IMAGE_BUCKET,
     });
@@ -69,6 +74,11 @@ const deleteImages = async (
   }
   let deletedCount = 0;
   try {
+    if (!mongoose.connection.db) {
+      return res.status(500).send({
+        message: "Failed to delete images. (ERR491)",
+      });
+    }
     const bucket = new GridFSBucket(mongoose.connection.db, {
       bucketName: process.env.DATABASE_IMAGE_BUCKET,
     });
@@ -134,6 +144,11 @@ const downloadGalleryImage = async (
     return res.status(400).send({ message: "Error: Specify the image's id." });
   }
   try {
+    if (!mongoose.connection.db) {
+      return res.status(500).send({
+        message: "Failed to download gallery image. (ERR491)",
+      });
+    }
     const bucket = new GridFSBucket(mongoose.connection.db, {
       // TODO: use process.env key instead
       bucketName: "gallery_images",
@@ -146,7 +161,7 @@ const downloadGalleryImage = async (
     });
     if (!document) {
       return res.status(500).send({
-        message: "Failed to download image details. (ERR492)",
+        message: "Failed to download gallery image. (ERR492)",
       });
     }
     res.set("title", document.metadata.title);
@@ -182,6 +197,11 @@ const deleteGalleryImages = async (
   }
   let deletedCount = 0;
   try {
+    if (!mongoose.connection.db) {
+      return res.status(500).send({
+        message: "Failed to delete gallery images. (ERR491)",
+      });
+    }
     const bucket = new GridFSBucket(mongoose.connection.db, {
       bucketName: "gallery_images",
     });
@@ -213,6 +233,11 @@ const getGalleryImageIdentifiers = async (
   res: Response,
 ) => {
   try {
+    if (!mongoose.connection.db) {
+      return res.status(500).send({
+        message: "Failed to get gallery image identifiers. (ERR491)",
+      });
+    }
     const authorId = req.token._id;
     const bucket = process.env.GALLERY_BUCKET || "gallery_images";
     const collectionName = `${bucket}.files`;

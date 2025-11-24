@@ -9,7 +9,7 @@ import { UserModel } from "../models/user";
 
 export default function (passport: PassportStatic) {
   const opts: StrategyOptionsWithRequest = {
-    secretOrKey: process.env.PUBLIC_KEY,
+    secretOrKey: process.env.PUBLIC_KEY || "",
     jwtFromRequest: ExtractJwt.fromUrlQueryParameter("token"),
     passReqToCallback: true,
   };

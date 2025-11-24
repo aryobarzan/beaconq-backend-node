@@ -64,7 +64,7 @@ const functions = {
         });
     }
 
-    const scheduledQuizIds = [];
+    const scheduledQuizIds: mongoose.Types.ObjectId[] = [];
     if (Array.isArray(scheduledQuizIdsRaw)) {
       for (const id of scheduledQuizIdsRaw) {
         try {

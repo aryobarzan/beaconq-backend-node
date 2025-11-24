@@ -80,7 +80,7 @@ const functions = {
     try {
       let responseStatus: number =
         CreateOrUpdateCourseAnnouncementStatus.Updated;
-      let savedAnnouncement: CourseAnnouncementDocument | null = null;
+      let savedAnnouncement: CourseAnnouncementDocument | undefined;
 
       await session.withTransaction(async () => {
         let existingAnnouncement: CourseAnnouncementDocument | null = null;
