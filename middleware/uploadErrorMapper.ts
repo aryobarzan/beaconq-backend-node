@@ -1,7 +1,7 @@
 import multer from "multer";
 
 // Helper function to map MulterErrors to standard HTTP status codes alongside an explanatory message
-function mapMulterError(err: unknown) {
+export function mapMulterError(err: unknown) {
   if (!err || !(err instanceof multer.MulterError) || !err.code) return null;
   const code = err.code;
 
@@ -30,5 +30,3 @@ function mapMulterError(err: unknown) {
   // Default for any other multer error code
   return { status: 400, body: { message: err.message || "Upload error." } };
 }
-
-export default { mapMulterError };
