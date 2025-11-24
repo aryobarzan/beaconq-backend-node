@@ -20,7 +20,7 @@
     "alwaysStrict": true,
 
     // Additional Checks - Enable when ready
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,

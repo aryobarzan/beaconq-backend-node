@@ -596,7 +596,6 @@ const functions = {
         case ScheduledQuizStatus.CanStart: {
           // we use a session/transaction to atomically ensure only a single ScheduledQuizUserStart is created
           const session = await mongoose.startSession();
-          let savedScheduledQuizUserStart = null;
           try {
             await session.withTransaction(async () => {
               // we re-check inside the transaction whether a ScheduledQuizUserStart already exists
@@ -608,7 +607,6 @@ const functions = {
                 ).exec();
 
               if (existingScheduledQuizUserStart) {
-                savedScheduledQuizUserStart = null;
                 return;
               }
 
@@ -620,17 +618,10 @@ const functions = {
               });
 
               // pass session to save()
-              savedScheduledQuizUserStart = await scheduledQuizUserStart.save({
+              await scheduledQuizUserStart.save({
                 session,
               });
             });
-
-            // Ideally we should recompute the status to ensure availableActivities and availablePlayTime are up-to-date., though this is not critical.
-            const finalStatus = await checkScheduledQuizUserStatus(
-              rawScheduledQuizId,
-              req.token._id,
-              false,
-            );
 
             return res.status(PlayScheduledQuizStatus.CanPlay).send({
               status: status.quizStatus,

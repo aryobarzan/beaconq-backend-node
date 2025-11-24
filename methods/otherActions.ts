@@ -2,7 +2,6 @@ import logger from "../middleware/logger";
 import process from "process";
 import ModelHelper from "../middleware/modelHelper";
 import AppFeedbackModel, {
-  AppFeedback,
   AppFeedbackDocument,
 } from "../models/logs/appFeedback";
 import fs from "fs";
