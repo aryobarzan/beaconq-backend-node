@@ -165,7 +165,7 @@ const functions = {
     }
   },
   isTokenValid: function (
-    req: Request<{}, {}, {}, { token: string }>,
+    req: Express.AuthenticatedRequest<{}, {}, {}, { token: string }>,
     res: Response,
   ) {
     // No need for any actual business logic here: this function is called as part of a secure route,
@@ -175,7 +175,10 @@ const functions = {
       .status(200)
       .send({ message: "Token is valid.", token: req.token });
   },
-  deleteAccount: async function (req: Request, res: Response) {
+  deleteAccount: async function (
+    req: Express.AuthenticatedRequest,
+    res: Response,
+  ) {
     try {
       const user = await UserModel.findById(req.token._id).exec();
       if (!user) {
@@ -250,7 +253,11 @@ const functions = {
     }
   },
   addSecretQuestion: async function (
-    req: Request<{}, {}, { question: string; answer: string }>,
+    req: Express.AuthenticatedRequest<
+      {},
+      {},
+      { question: string; answer: string }
+    >,
     res: Response,
   ) {
     if (!req.body.question || !req.body.answer) {
@@ -321,7 +328,11 @@ const functions = {
     }
   },
   verifySecretQuestion: async function (
-    req: Request<{}, {}, { question: string; answer: string }>,
+    req: Express.AuthenticatedRequest<
+      {},
+      {},
+      { question: string; answer: string }
+    >,
     res: Response,
   ) {
     if (!req.body.question || !req.body.answer) {
@@ -365,7 +376,11 @@ const functions = {
     }
   },
   updatePasswordAuthenticated: async function (
-    req: Request<{}, {}, { oldPassword: string; newPassword: string }>,
+    req: Express.AuthenticatedRequest<
+      {},
+      {},
+      { oldPassword: string; newPassword: string }
+    >,
     res: Response,
   ) {
     if (!req.body.oldPassword || !req.body.newPassword) {

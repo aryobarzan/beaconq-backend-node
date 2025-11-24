@@ -2,7 +2,7 @@ import { TopicDocument, TopicModel } from "../../models/topic";
 import { PermissionModel, hasPermissions } from "../../models/permission";
 import mongoose from "mongoose";
 import logger from "../../middleware/logger";
-import { Request, Response } from "express";
+import { Response } from "express";
 // Possible status codes
 enum CreateOrUpdateTopicStatus {
   Created = 200,
@@ -24,10 +24,12 @@ class CreateOrUpdateTopicPermissionError extends Error {
   }
 }
 
-
-var functions = {
-  createOrUpdateTopic: async function (req: Request<{}, {}, { topic: string }>, res: Response) {
-    if (req.token.role !== "TEACHER") {
+const functions = {
+  createOrUpdateTopic: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { topic: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Topic creation failed: only teachers are authorized.",
       });
@@ -40,9 +42,10 @@ var functions = {
     let newTopic: TopicDocument;
     try {
       newTopic = new TopicModel(JSON.parse(req.body.topic));
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(CreateOrUpdateTopicStatus.InternalError).send({
-        message: "Topic creation failed: topic could not be deserialized.",
+        message:
+          "Topic creation failed: topic could not be parsed/deserialized.",
       });
     }
 
@@ -72,7 +75,7 @@ var functions = {
             user: req.token._id,
             resourceType: "TOPIC",
             resource: savedTopic._id,
-            level: 7,
+            level: PermissionLevel.EXECUTE,
           }).save({ session });
           result = savedTopic;
         } else {
@@ -131,8 +134,8 @@ var functions = {
       session.endSession();
     }
   },
-  getTopics: async function (req: Request, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  getTopics: async function (req: Express.AuthenticatedRequest, res: Response) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Topic fetching failed: only teachers are authorized.",
       });
@@ -154,7 +157,7 @@ var functions = {
               $elemMatch: {
                 resourceType: "TOPIC",
                 user: new mongoose.Types.ObjectId(req.token._id),
-                level: { $gte: 4 },
+                level: { $gte: PermissionLevel.READ },
               },
             },
           },
@@ -166,9 +169,7 @@ var functions = {
           message: "Topic fetching failed: none found.",
         });
       }
-      return res
-        .status(GetTopicsStatus.Retrieved)
-        .send({ topics });
+      return res.status(GetTopicsStatus.Retrieved).send({ topics });
     } catch (err) {
       logger.error(err);
       return res.status(GetTopicsStatus.InternalError).send({
@@ -177,23 +178,21 @@ var functions = {
     }
   },
   // DEPRECATED: for compatibility with older client versions, we just return a generic response that indicates success.
-  rateTopic: function (_: Request, res: Response) {
+  rateTopic: function (_: Express.AuthenticatedRequest, res: Response) {
     return res.status(200).send({
       message: "Topic rating for course session stored.",
     });
   },
   // DEPRECATED: for compatibility with older client versions, we just return an empty array.
-  getTopicRatings: function (_: Request, res: Response) {
+  getTopicRatings: function (_: Express.AuthenticatedRequest, res: Response) {
     return res.status(200).send({
       message: "Topic ratings retrieved.",
       topicRatings: [],
     });
   },
   // DEPRECATED: for compatibility with older client versions, we just respond that there are no topic ratings.
-  getTopicsRatings: function (_: Request, res: Response) {
-    return res
-      .status(209)
-      .send({ message: "No Topic ratings found." });
+  getTopicsRatings: function (_: Express.AuthenticatedRequest, res: Response) {
+    return res.status(209).send({ message: "No Topic ratings found." });
   },
 };
 

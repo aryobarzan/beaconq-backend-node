@@ -3,7 +3,7 @@ import { PermissionModel, hasPermissions } from "../../models/permission";
 import ModelHelper from "../../middleware/modelHelper";
 import mongoose from "mongoose";
 import logger from "../../middleware/logger";
-import { Request, Response } from "express";
+import { Response } from "express";
 
 enum CreateOrUpdateQuizStatus {
   Created = 200,
@@ -26,9 +26,12 @@ class CreateOrUpdateQuizPermissionError extends Error {
   }
 }
 
-var functions = {
-  createOrUpdateQuiz: async function (req: Request<{}, {}, { quiz: string }>, res: Response) {
-    if (req.token.role !== "TEACHER") {
+const functions = {
+  createOrUpdateQuiz: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { quiz: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Quiz creation failed: only teachers are authorized.",
       });
@@ -43,7 +46,7 @@ var functions = {
       newQuiz = new QuizModel(JSON.parse(req.body.quiz));
     } catch (err: unknown) {
       return res.status(CreateOrUpdateQuizStatus.InternalError).send({
-        message: "Quiz creation failed: quiz could not be deserialized.",
+        message: "Quiz creation failed: quiz could not be parsed/deserialized.",
       });
     }
 
@@ -72,7 +75,7 @@ var functions = {
             user: req.token._id,
             resourceType: "QUIZ",
             resource: savedQuiz._id,
-            level: 7,
+            level: PermissionLevel.EXECUTE,
           }).save({ session });
           const populatedQuiz = await ModelHelper.populateQuiz(savedQuiz);
           if (!populatedQuiz) {
@@ -144,8 +147,11 @@ var functions = {
       session.endSession();
     }
   },
-  getQuizzes: async function (req: Request, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  getQuizzes: async function (
+    req: Express.AuthenticatedRequest,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Quiz fetching failed: only teachers are authorized.",
       });
@@ -167,7 +173,7 @@ var functions = {
               $elemMatch: {
                 resourceType: "QUIZ",
                 user: new mongoose.Types.ObjectId(req.token._id),
-                level: { $gte: 4 },
+                level: { $gte: PermissionLevel.READ },
               },
             },
           },
@@ -179,16 +185,17 @@ var functions = {
           .status(GetQuizzesStatus.None)
           .send({ message: "Quiz fetching found no quizzes." });
       }
-      const populatedQuizzes = await ModelHelper.populateQuiz(quizzes as QuizDocument[]);
+      let populatedQuizzes = await ModelHelper.populateQuiz(quizzes);
       if (!populatedQuizzes) {
         res.status(GetQuizzesStatus.InternalError).send({
           message: "Quiz fetching failed: failed to populate activities.",
         });
         return;
       }
+      populatedQuizzes = populatedQuizzes as QuizDocument[];
       return res
         .status(GetQuizzesStatus.Retrieved)
-        .send({ quizzes: JSON.parse(JSON.stringify(populatedQuizzes)) });
+        .send({ quizzes: populatedQuizzes.map((q) => q.toJSON()) });
     } catch (err: unknown) {
       logger.error(err);
       return res

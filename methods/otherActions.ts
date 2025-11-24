@@ -1,7 +1,10 @@
 import logger from "../middleware/logger";
 import process from "process";
 import ModelHelper from "../middleware/modelHelper";
-import AppFeedbackModel, { AppFeedback, AppFeedbackDocument } from "../models/logs/appFeedback";
+import AppFeedbackModel, {
+  AppFeedback,
+  AppFeedbackDocument,
+} from "../models/logs/appFeedback";
 import fs from "fs";
 import path from "path";
 import { Request, Response } from "express";
@@ -23,8 +26,11 @@ const functions = {
   getFeedbackAPIDetails: function (_: Request, res: Response) {
     return res.status(500).send();
   },
-  getOpenAIAPIDetails: function (req: Request, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  getOpenAIAPIDetails: function (
+    req: Express.AuthenticatedRequest,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "You are not authorized to do this.",
       });
@@ -49,7 +55,9 @@ const functions = {
       if (file["fieldname"] === "logFile") {
         logFileString = file["buffer"].toString();
       } else if (file["fieldname"] === "appFeedback") {
-        appFeedback = ModelHelper.decodeAppFeedback(JSON.parse(file["buffer"].toString()));
+        appFeedback = ModelHelper.decodeAppFeedback(
+          JSON.parse(file["buffer"].toString()),
+        );
       }
     }
     if (!appFeedback) {
@@ -99,15 +107,19 @@ const functions = {
       });
     }
   },
-  getAppFeedback: async function (req: Request, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  getAppFeedback: async function (
+    req: Express.AuthenticatedRequest,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Cannot view app feedback: only teachers are authorized.",
       });
     }
     try {
       const appFeedbacks = await AppFeedbackModel.find()
-        .populate("user", "username role").lean()
+        .populate("user", "username role")
+        .lean()
         .exec();
       return res.status(GetAppFeedbackStatus.Retrieved).send({
         appFeedback: appFeedbacks,

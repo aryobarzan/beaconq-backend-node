@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/user";
 import process from "process";
-import logger from "../middleware/logger";
+import logger from "./logger";
 import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 
@@ -10,6 +10,11 @@ type DecodedToken = Express.DecodedToken;
 
 // "Response" return type necessary in case of failures, where we return res.status(...).send(...)
 // Otherwise, if the authentication is successful, next() is called and nothing is returned (void).
+
+/**
+ * Authentication middleware that verifies JWT tokens and attaches
+ * the decoded token data to the request object. (AuthenticatedRequest)
+ */
 export default async (
   req: Request,
   res: Response,

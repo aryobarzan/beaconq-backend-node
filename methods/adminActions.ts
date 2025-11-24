@@ -1,7 +1,6 @@
 import { UserModel } from "../models/user";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import { Request, Response } from "express";
+import { Response } from "express";
 import logger from "../middleware/logger";
 import permissionHelper from "../middleware/permissionHelper";
 import { validatePassword } from "./helperFunctions";
@@ -35,7 +34,10 @@ class ChangePasswordSaveFailedError extends Error {
 }
 
 const functions = {
-  authenticateAdmin: function (req: Request<{ adminPassword: string }>, res: Response) {
+  authenticateAdmin: function (
+    req: Express.AuthenticatedRequest<{ adminPassword: string }>,
+    res: Response,
+  ) {
     if (
       !req.params.adminPassword ||
       !permissionHelper.isUserAdmin(req.token._id, req.params.adminPassword)
@@ -48,7 +50,10 @@ const functions = {
       message: "Authorized.",
     });
   },
-  getUsers: async function (req: Request<{ adminPassword: string }>, res: Response) {
+  getUsers: async function (
+    req: Express.AuthenticatedRequest<{ adminPassword: string }>,
+    res: Response,
+  ) {
     if (
       !req.params.adminPassword ||
       !permissionHelper.isUserAdmin(req.token._id, req.params.adminPassword)
@@ -59,7 +64,10 @@ const functions = {
     }
     try {
       // Limit number of users returned to avoid high memory usage
-      const users = await UserModel.find({}, "username createdAt updatedAt role _id")
+      const users = await UserModel.find(
+        {},
+        "username createdAt updatedAt role _id",
+      )
         .limit(1000)
         .lean()
         .exec();
@@ -72,14 +80,21 @@ const functions = {
         message: "Users retrieved.",
         users: users,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error(err);
       return res.status(GetUsersStatus.InternalError).send({
         message: "Users fetching failed: an error occurred. (ERR1)",
       });
     }
   },
-  changeUserPassword: async function (req: Request<{}, {}, { adminPassword: string; userId: string; newPassword: string }>, res: Response) {
+  changeUserPassword: async function (
+    req: Express.AuthenticatedRequest<
+      {},
+      {},
+      { adminPassword: string; userId: string; newPassword: string }
+    >,
+    res: Response,
+  ) {
     if (
       !req.body.adminPassword ||
       !permissionHelper.isUserAdmin(req.token._id, req.body.adminPassword)
@@ -103,18 +118,20 @@ const functions = {
     const userId = new mongoose.Types.ObjectId(req.body.userId);
 
     const newPassword = String(req.body.newPassword);
-    const isNewPasswordValid = validatePassword(newPassword)
+    const isNewPasswordValid = validatePassword(newPassword);
     if (!isNewPasswordValid) {
       return res.status(ChangeUserPasswordStatus.InvalidNewPassword).send({
         message: "New password does not conform to the requirements.",
       });
     }
 
-    let session: mongoose.ClientSession
+    let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
     } catch (err: unknown) {
-      logger.error(`Could not start mongo session for changeUserPassword: ${err}`);
+      logger.error(
+        `Could not start mongo session for changeUserPassword: ${err}`,
+      );
       return res.status(ChangeUserPasswordStatus.InternalError).send({
         message: "An error occurred while changing user password. (ERR4)",
       });
@@ -156,9 +173,12 @@ const functions = {
           payload: { message: "Password changed." },
         };
       });
-    } catch (err) {
+    } catch (err: unknown) {
       // unexpected error
-      if (!(err instanceof ChangePasswordUserNotFoundError) && !(err instanceof ChangePasswordSaveFailedError)) {
+      if (
+        !(err instanceof ChangePasswordUserNotFoundError) &&
+        !(err instanceof ChangePasswordSaveFailedError)
+      ) {
         logger.error(`changeUserPassword transaction failed: ${err}`);
         responseToSend = {
           code: ChangeUserPasswordStatus.InternalError,

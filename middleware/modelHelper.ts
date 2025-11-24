@@ -2,23 +2,60 @@ import { Course, CourseModel, CourseDocument } from "../models/course";
 import { CourseSession } from "../models/courseSession";
 import { CourseRegistrationModel } from "../models/courseRegistration";
 import { Quiz, QuizModel, QuizDocument } from "../models/quiz";
-import { ActivityDocument, ActivityModel, ChoiceActivityDocument, ChoiceActivityModel, DartBlockActivityDocument, DartBlockActivityModel } from "../models/activity";
-import { ScheduledQuizDocument, model as ScheduledQuizModel } from "../models/scheduledQuiz";
-import { ChoiceActivityUserAnswerModel, RecallActivityUserAnswerModel, DartBlockActivityUserAnswerModel, ChoiceActivityUserAnswerDocument, RecallActivityUserAnswerDocument, DartBlockActivityUserAnswerDocument } from "../models/logs/activityUserAnswer";
-import { ChoiceActivityFeedbackViewModel, DartBlockActivityFeedbackViewModel, ChoiceActivityFeedbackViewDocument, DartBlockActivityFeedbackViewDocument } from "../models/logs/activityFeedbackView";
-import { SurveyAnswerModel, SurveyAnswerDocument } from "../models/logs/surveyAnswer";
-import { PlayContextModel, PlayContextDocument } from "../models/logs/playContext";
-import { AppFeedbackModel, AppFeedbackDocument } from "../models/logs/appFeedback";
-import { model as AchievementModel, AchievementDocument } from "../models/achievement";
-import { model as UserAchievementModel, UserAchievementDocument } from "../models/userAchievement";
+import {
+  ActivityDocument,
+  ActivityModel,
+  ChoiceActivityDocument,
+  ChoiceActivityModel,
+  DartBlockActivityDocument,
+  DartBlockActivityModel,
+} from "../models/activity";
+import {
+  ScheduledQuizDocument,
+  model as ScheduledQuizModel,
+} from "../models/scheduledQuiz";
+import {
+  ChoiceActivityUserAnswerModel,
+  RecallActivityUserAnswerModel,
+  DartBlockActivityUserAnswerModel,
+  ChoiceActivityUserAnswerDocument,
+  RecallActivityUserAnswerDocument,
+  DartBlockActivityUserAnswerDocument,
+} from "../models/logs/activityUserAnswer";
+import {
+  ChoiceActivityFeedbackViewModel,
+  DartBlockActivityFeedbackViewModel,
+  ChoiceActivityFeedbackViewDocument,
+  DartBlockActivityFeedbackViewDocument,
+} from "../models/logs/activityFeedbackView";
+import {
+  SurveyAnswerModel,
+  SurveyAnswerDocument,
+} from "../models/logs/surveyAnswer";
+import {
+  PlayContextModel,
+  PlayContextDocument,
+} from "../models/logs/playContext";
+import {
+  AppFeedbackModel,
+  AppFeedbackDocument,
+} from "../models/logs/appFeedback";
+import {
+  model as AchievementModel,
+  AchievementDocument,
+} from "../models/achievement";
+import {
+  model as UserAchievementModel,
+  UserAchievementDocument,
+} from "../models/userAchievement";
 import mongoose from "mongoose";
 import logger from "./logger";
 
-
-
 const functions = {
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
-  populateCourse: async function (course: CourseDocument | CourseDocument[]): Promise<CourseDocument> {
+  populateCourse: async function (
+    course: CourseDocument | CourseDocument[],
+  ): Promise<CourseDocument | CourseDocument[]> {
     return CourseModel.populate(course, [
       { path: "sessions.topics", model: "Topic" },
       {
@@ -43,7 +80,9 @@ const functions = {
   },
 
   // Helper function to populate (replace references with the actual documents) the activities in a course document.
-  populateQuiz: async function (quiz: QuizDocument | QuizDocument[]): Promise<QuizDocument | QuizDocument[]> {
+  populateQuiz: async function (
+    quiz: QuizDocument | QuizDocument[],
+  ): Promise<QuizDocument | QuizDocument[]> {
     return QuizModel.populate(quiz, [
       {
         path: "activities",
@@ -53,19 +92,25 @@ const functions = {
     ]);
   },
 
-  populateActivity: async function (activity: ActivityDocument): Promise<ActivityDocument> {
+  populateActivity: async function (
+    activity: ActivityDocument,
+  ): Promise<ActivityDocument> {
     return ActivityModel.populate(activity, [
       { path: "topics", model: "Topic" },
     ]);
   },
 
-  populateActivities: async function (activities: ActivityDocument[]): Promise<ActivityDocument[]> {
+  populateActivities: async function (
+    activities: ActivityDocument[],
+  ): Promise<ActivityDocument[]> {
     return ActivityModel.populate(activities, [
       { path: "topics", model: "Topic" },
     ]);
   },
 
-  findScheduledQuiz: async function (scheduledQuizId: string): Promise<ScheduledQuizDocument | null> {
+  findScheduledQuiz: async function (
+    scheduledQuizId: string,
+  ): Promise<ScheduledQuizDocument | null> {
     if (!mongoose.isValidObjectId(scheduledQuizId)) {
       logger.error(
         `[ModelHelper.findScheduledQuiz] Invalid scheduledQuizId: ${scheduledQuizId}`,
@@ -124,14 +169,15 @@ const functions = {
     return QuizModel.findById(quizId).populate("activities").exec();
   },
 
-  findCourseAndSession: async function (scheduledQuizId: string): Promise<{ course: Course; courseSession: CourseSession } | null> {
+  findCourseAndSession: async function (
+    scheduledQuizId: string,
+  ): Promise<{ course: Course; courseSession: CourseSession } | null> {
     const scheduledQuizObjectId = new mongoose.Types.ObjectId(scheduledQuizId);
     const arrayResult = await CourseModel.aggregate([
       // Match by the given scheduled quiz id
       {
         $match: {
-          "sessions.scheduledQuizzes._id":
-            scheduledQuizObjectId,
+          "sessions.scheduledQuizzes._id": scheduledQuizObjectId,
         },
       },
       // Unwind the sessions array of the found Course
@@ -139,8 +185,7 @@ const functions = {
       // Match only the session which contains the found scheduled quiz
       {
         $match: {
-          "sessions.scheduledQuizzes._id":
-            scheduledQuizObjectId,
+          "sessions.scheduledQuizzes._id": scheduledQuizObjectId,
         },
       },
     ]);
@@ -157,11 +202,12 @@ const functions = {
   },
 
   /// Properties are not populated, such as topics list.
-  retrieveCourseSession: async function (courseSessionId: string): Promise<CourseSession | null> {
+  retrieveCourseSession: async function (
+    courseSessionId: string,
+  ): Promise<CourseSession | null> {
     const course = await CourseModel.findOne({
       "sessions._id": new mongoose.Types.ObjectId(courseSessionId),
-    })
-      .exec();
+    }).exec();
     if (!course) {
       return null;
     }
@@ -178,33 +224,36 @@ const functions = {
    * @param  {[string]} userId The method handles conversion to mongoose.Types.ObjectId
    * @return {[type]}      Array of courses which are NOT populated.
    */
-  getUserRegisteredCourses: async function (userId: string): Promise<CourseDocument[]> {
+  getUserRegisteredCourses: async function (
+    userId: string,
+  ): Promise<CourseDocument[]> {
     const courseRegistrations = await CourseRegistrationModel.find({
       user: new mongoose.Types.ObjectId(userId),
       isActive: { $eq: true },
-    })
-      .exec();
+    }).exec();
     if (!courseRegistrations) {
       return [];
     } else {
       const courses = await CourseModel.find({
         _id: {
-          $in: courseRegistrations.map((courseRegistration) =>
-            courseRegistration.course,
+          $in: courseRegistrations.map(
+            (courseRegistration) => courseRegistration.course,
           ),
         },
-      })
-        .exec();
+      }).exec();
       if (!courses) {
         return [];
       } else {
-        return courses
+        return courses;
       }
     }
   },
 
-  decodeActivity: function (activityJSON: any): ChoiceActivityDocument | DartBlockActivityDocument | null {
-    let activity: ChoiceActivityDocument | DartBlockActivityDocument | null = null;
+  decodeActivity: function (
+    activityJSON: any,
+  ): ChoiceActivityDocument | DartBlockActivityDocument | null {
+    let activity: ChoiceActivityDocument | DartBlockActivityDocument | null =
+      null;
     if (!activityJSON || !activityJSON["kind"]) {
       logger.error("Activity creation failed: Invalid activity JSON.");
       return null;
@@ -224,10 +273,22 @@ const functions = {
     return activity;
   },
 
-  decodeActivityUserAnswer: function (json: any): ChoiceActivityUserAnswerDocument | RecallActivityUserAnswerDocument | DartBlockActivityUserAnswerDocument | null {
-    let activityUserAnswer: ChoiceActivityUserAnswerDocument | RecallActivityUserAnswerDocument | DartBlockActivityUserAnswerDocument | null = null;
+  decodeActivityUserAnswer: function (
+    json: any,
+  ):
+    | ChoiceActivityUserAnswerDocument
+    | RecallActivityUserAnswerDocument
+    | DartBlockActivityUserAnswerDocument
+    | null {
+    let activityUserAnswer:
+      | ChoiceActivityUserAnswerDocument
+      | RecallActivityUserAnswerDocument
+      | DartBlockActivityUserAnswerDocument
+      | null = null;
     if (!json || !json["activityAnswerType"]) {
-      logger.error("Activity user answer creation failed: Invalid activity user answer JSON.");
+      logger.error(
+        "Activity user answer creation failed: Invalid activity user answer JSON.",
+      );
       return null;
     }
     try {
@@ -238,7 +299,7 @@ const functions = {
         } else {
           logger.warn(
             "Converting old schema of activity user answer field 'answers' from Map to Array: " +
-            JSON.stringify(json["answers"]),
+              JSON.stringify(json["answers"]),
           );
           let answers = [];
           for (let key in json["answers"]) {
@@ -246,16 +307,14 @@ const functions = {
           }
           json["answers"] = answers;
         }
-        activityUserAnswer = new ChoiceActivityUserAnswerModel(
-          json,
-        );
+        activityUserAnswer = new ChoiceActivityUserAnswerModel(json);
       } else if (answerType === "recallAnswer") {
         if (Array.isArray(json["answers"])) {
           // no conversion needed
         } else {
           logger.warn(
             "Converting old schema of activity user answer field 'answers' from Map to Array: " +
-            JSON.stringify(json["answers"]),
+              JSON.stringify(json["answers"]),
           );
           let answers = [];
           for (let key in json["answers"]) {
@@ -263,13 +322,9 @@ const functions = {
           }
           json["answers"] = answers;
         }
-        activityUserAnswer = new RecallActivityUserAnswerModel(
-          json,
-        );
+        activityUserAnswer = new RecallActivityUserAnswerModel(json);
       } else if (answerType === "dartblockAnswer") {
-        activityUserAnswer = new DartBlockActivityUserAnswerModel(
-          json,
-        );
+        activityUserAnswer = new DartBlockActivityUserAnswerModel(json);
       } else {
         logger.error(
           "Activity answer logging failed: Unknown activity answer type.",
@@ -281,20 +336,28 @@ const functions = {
     return activityUserAnswer;
   },
 
-  decodeActivityFeedbackView: function (json: any): ChoiceActivityFeedbackViewDocument | DartBlockActivityFeedbackViewDocument | null {
-    let activityFeedbackView: ChoiceActivityFeedbackViewDocument | DartBlockActivityFeedbackViewDocument | null = null;
+  decodeActivityFeedbackView: function (
+    json: any,
+  ):
+    | ChoiceActivityFeedbackViewDocument
+    | DartBlockActivityFeedbackViewDocument
+    | null {
+    let activityFeedbackView:
+      | ChoiceActivityFeedbackViewDocument
+      | DartBlockActivityFeedbackViewDocument
+      | null = null;
     if (!json || !json["kind"]) {
-      logger.error("Activity feedback view decoding failed: Invalid activity feedback view JSON.");
+      logger.error(
+        "Activity feedback view decoding failed: Invalid activity feedback view JSON.",
+      );
       return null;
     }
     try {
       const kind = String(json["kind"]);
       if (kind === "ChoiceActivityFeedbackView") {
-        activityFeedbackView =
-          new ChoiceActivityFeedbackViewModel(json);
+        activityFeedbackView = new ChoiceActivityFeedbackViewModel(json);
       } else if (kind === "DartBlockActivityFeedbackView") {
-        activityFeedbackView =
-          new DartBlockActivityFeedbackViewModel(json);
+        activityFeedbackView = new DartBlockActivityFeedbackViewModel(json);
       } else {
         logger.error("Activity feedback view decoding failed: Unknown kind.");
       }
@@ -352,7 +415,7 @@ const functions = {
       logger.error(err);
     }
     return appFeedback;
-  }
-}
+  },
+};
 
 export default functions;

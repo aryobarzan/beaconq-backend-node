@@ -1,7 +1,7 @@
 import { FSRSDocument, FSRSModel } from "../../models/fsrsModel";
 import mongoose from "mongoose";
 import logger from "../../middleware/logger";
-import { Request, Response } from "express";
+import { Response } from "express";
 
 enum StoreFSRSModelsStatus {
   Stored = 200,
@@ -9,8 +9,11 @@ enum StoreFSRSModelsStatus {
   InternalError = 500,
 }
 
-var functions = {
-  storeFSRSModels: async function (req: Request<{}, {}, { fsrsModels: string }>, res: Response) {
+const functions = {
+  storeFSRSModels: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { fsrsModels: string }>,
+    res: Response,
+  ) {
     if (!req.body.fsrsModels) {
       return res.status(StoreFSRSModelsStatus.MissingArguments).send({
         message: "FSRS models storage failed: parameter missing.",
@@ -25,7 +28,7 @@ var functions = {
     } catch (err: unknown) {
       logger.error(err);
       return res.status(StoreFSRSModelsStatus.InternalError).send({
-        message: "FSRS models storage failed: parameter missing.",
+        message: "FSRS models storage failed: parameter could not be parsed.",
       });
     }
     let fsrsModels: FSRSDocument[] = [];
@@ -43,7 +46,10 @@ var functions = {
       }
     }
     try {
-      const existingFSRSModels = await FSRSModel.find({ user: userId, dataId: { $in: dataIdsToSearch } }).exec()
+      const existingFSRSModels = await FSRSModel.find({
+        user: userId,
+        dataId: { $in: dataIdsToSearch },
+      }).exec();
       let operations: any[] = [];
       for (let fsrsModel of fsrsModels) {
         const filtered = existingFSRSModels.filter((x) => {
@@ -99,8 +105,7 @@ var functions = {
     } catch (err: unknown) {
       logger.error(err);
       return res.status(StoreFSRSModelsStatus.InternalError).send({
-        message:
-          "An error occurred while searching for existing FSRS models.",
+        message: "An error occurred while searching for existing FSRS models.",
       });
     }
   },

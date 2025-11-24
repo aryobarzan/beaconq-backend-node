@@ -7,16 +7,36 @@
 // Important: we cannot use "import" statements, nor "export" statements in this file, otherwise
 // it will no longer be treated as an ambient declaration file.
 
-declare namespace Express {
-  interface DecodedToken {
-    _id: string;
-    username: string;
-    role?: string;
-    iat?: number;
-    exp?: number;
-  }
-  export interface Request {
-    token?: DecodedToken; // decoded JWT token (user data without password)
-    username?: string;
+import type { ParsedQs } from 'qs';
+import type { Request as ExpressRequest } from 'express-serve-static-core';
+
+declare global {
+  namespace Express {
+    interface DecodedToken {
+      _id: string;
+      username: string;
+      role?: string;
+      iat?: number;
+      exp?: number;
+    }
+
+    interface Request {
+      token?: DecodedToken; // decoded JWT token (user data without password)
+      username?: string;
+    }
+
+    interface AuthenticatedRequest<
+      P = {},
+      ResBody = any,
+      ReqBody = any,
+      ReqQuery = ParsedQs,
+      LocalsObj extends Record<string, any> = Record<string, any>
+    > extends ExpressRequest<P, ResBody, ReqBody, ReqQuery, LocalsObj> {
+      token: DecodedToken; // decoded JWT token (user data without password) - REQUIRED
+      username: string; // REQUIRED
+    }
   }
 }
+
+// empty export to avoid this file from being marked as a script instead of a module
+export { };

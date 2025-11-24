@@ -5,7 +5,7 @@ import { ActivityDocument, ActivityModel } from "../../models/activity";
 import { TopicDocument, TopicModel } from "../../models/topic";
 import logger from "../../middleware/logger";
 import mongoose from "mongoose";
-import { Request, Response } from "express";
+import { Response } from "express";
 
 // Possible status codes
 enum CheckForUpdatesStatus {
@@ -41,7 +41,10 @@ enum CheckForTopicUpdatesStatus {
 }
 
 const functions = {
-  checkForCourseUpdates: async function (req: Request<{}, {}, { courses: string }>, res: Response) {
+  checkForCourseUpdates: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { courses: string }>,
+    res: Response,
+  ) {
     if (!req.body.courses) {
       return res
         .status(CheckForUpdatesStatus.MissingArguments)
@@ -124,7 +127,10 @@ const functions = {
       });
     }
   },
-  checkForQuizUpdates: async function (req: Request<{}, {}, { quizzes: string }>, res: Response) {
+  checkForQuizUpdates: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { quizzes: string }>,
+    res: Response,
+  ) {
     if (!req.body.quizzes) {
       return res
         .status(CheckForQuizUpdatesStatus.MissingArguments)
@@ -165,7 +171,9 @@ const functions = {
     }
 
     try {
-      const quizzes = await QuizModel.find({ _id: { $in: quizObjectIds } }).exec();
+      const quizzes = await QuizModel.find({
+        _id: { $in: quizObjectIds },
+      }).exec();
       if (!quizzes || quizzes.length === 0) {
         return res.status(CheckForQuizUpdatesStatus.QuizzesNotFound).send({
           message: "Can't check for updates: quizzes could not be found.",
@@ -195,7 +203,9 @@ const functions = {
       }
       return res.status(CheckForQuizUpdatesStatus.UpdatesAvailable).send({
         message: "Updates are available.",
-        quizzes: Array.isArray(populatedQuizzes) ? populatedQuizzes.map((q) => q.toJSON()) : [populatedQuizzes.toJSON()],
+        quizzes: Array.isArray(populatedQuizzes)
+          ? populatedQuizzes.map((q) => q.toJSON())
+          : [populatedQuizzes.toJSON()],
       });
     } catch (err: unknown) {
       logger.error(err);
@@ -204,7 +214,10 @@ const functions = {
       });
     }
   },
-  checkForActivityUpdates: async function (req: Request<{}, {}, { activities: string }>, res: Response) {
+  checkForActivityUpdates: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { activities: string }>,
+    res: Response,
+  ) {
     if (!req.body.activities) {
       return res
         .status(CheckForActivityUpdatesStatus.MissingArguments)
@@ -283,7 +296,10 @@ const functions = {
       });
     }
   },
-  checkForTopicUpdates: async function (req: Request<{}, {}, { topics: string }>, res: Response) {
+  checkForTopicUpdates: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { topics: string }>,
+    res: Response,
+  ) {
     if (!req.body.topics) {
       return res
         .status(CheckForTopicUpdatesStatus.MissingArguments)
@@ -324,7 +340,9 @@ const functions = {
     }
 
     try {
-      const topics = await TopicModel.find({ _id: { $in: topicObjectIds } }).exec();
+      const topics = await TopicModel.find({
+        _id: { $in: topicObjectIds },
+      }).exec();
       if (!topics || topics.length === 0) {
         return res.status(CheckForTopicUpdatesStatus.TopicsNotFound).send({
           message: "Can't check for updates: topics could not be found.",

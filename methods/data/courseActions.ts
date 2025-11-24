@@ -1,8 +1,11 @@
 import logger from "../../middleware/logger";
-import { Request, Response } from "express";
+import { Response } from "express";
 import { PermissionModel, hasPermissions } from "../../models/permission";
 import { CourseDocument, CourseModel } from "../../models/course";
-import { CourseRegistrationDocument, CourseRegistrationModel } from "../../models/courseRegistration";
+import {
+  CourseRegistrationDocument,
+  CourseRegistrationModel,
+} from "../../models/courseRegistration";
 import ModelHelper from "../../middleware/modelHelper";
 import firebaseHelper from "../../middleware/firebaseHelper";
 import mongoose from "mongoose";
@@ -64,8 +67,11 @@ class CreateOrUpdateCoursePermissionError extends Error {
 }
 
 const functions = {
-  createOrUpdateCourse: async function (req: Request<{}, {}, { course: string }>, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  createOrUpdateCourse: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { course: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Course creation failed: only teachers are authorized.",
       });
@@ -81,10 +87,10 @@ const functions = {
       newCourse = new CourseModel(JSON.parse(req.body.course));
     } catch (err: unknown) {
       return res.status(CreateOrUpdateCourseStatus.InternalError).send({
-        message: "Course creation failed: course could not be deserialized.",
+        message:
+          "Course creation failed: course could not be parsed/deserialized.",
       });
     }
-
 
     let session: mongoose.ClientSession;
     try {
@@ -112,7 +118,7 @@ const functions = {
             user: req.token._id,
             resourceType: "COURSE",
             resource: savedCourse._id,
-            level: 7,
+            level: PermissionLevel.EXECUTE,
           }).save({ session });
 
           const populatedCourse = await ModelHelper.populateCourse(savedCourse);
@@ -121,7 +127,7 @@ const functions = {
               "Course created but failed to populate course properties.",
             );
           }
-          result = populatedCourse;
+          result = populatedCourse as CourseDocument;
         }
         // update existing course
         else {
@@ -160,7 +166,7 @@ const functions = {
               "Course updated but failed to populate course properties.",
             );
           }
-          result = populatedCourse;
+          result = populatedCourse as CourseDocument;
         }
       });
       if (result) {
@@ -188,8 +194,11 @@ const functions = {
       session.endSession();
     }
   },
-  getCourses: async function (req: Request, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  getCourses: async function (
+    req: Express.AuthenticatedRequest,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Course fetching failed: only teachers are authorized.",
       });
@@ -211,7 +220,7 @@ const functions = {
               $elemMatch: {
                 resourceType: "COURSE",
                 user: new mongoose.Types.ObjectId(req.token._id),
-                level: { $gte: 4 },
+                level: { $gte: PermissionLevel.READ },
               },
             },
           },
@@ -231,7 +240,9 @@ const functions = {
         });
       }
       return res.status(GetCoursesStatus.Retrieved).send({
-        courses: JSON.parse(JSON.stringify(populatedCourses)),
+        courses: Array.isArray(populatedCourses)
+          ? populatedCourses.map((c) => c.toJSON())
+          : populatedCourses.toJSON(),
       });
     } catch (err: unknown) {
       logger.error(err);
@@ -243,7 +254,10 @@ const functions = {
   },
 
   // User (Student) actions
-  registerToCourse: async function (req: Request<{}, {}, { accessKey: string }>, res: Response) {
+  registerToCourse: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { accessKey: string }>,
+    res: Response,
+  ) {
     if (!req.body.accessKey) {
       return res.status(RegisterCourseStatus.MissingArgument).send({
         message: "Course registration failed: access key was not indicated.",
@@ -314,7 +328,7 @@ const functions = {
           // Note that only students can register / re-active their registration.
           if (
             activeCount >= registrationLimit &&
-            req.token.role === "STUDENT"
+            req.token.role === UserRole.STUDENT
           ) {
             // limit reached, cannot reactivate
             throw new CourseRegistrationLimitReachedError();
@@ -332,7 +346,10 @@ const functions = {
         }
 
         // no existing registration
-        if (activeCount >= registrationLimit && req.token.role === "STUDENT") {
+        if (
+          activeCount >= registrationLimit &&
+          req.token.role === UserRole.STUDENT
+        ) {
           throw new CourseRegistrationLimitReachedError();
         }
 
@@ -349,13 +366,14 @@ const functions = {
         };
       });
 
-      const populatedCourse = await ModelHelper.populateCourse(course);
+      let populatedCourse = await ModelHelper.populateCourse(course);
       if (!populatedCourse) {
         return res.status(RegisterCourseStatus.InternalError).send({
           message:
             "Course registration succeeded but failed to populate course.",
         });
       }
+      populatedCourse = populatedCourse as CourseDocument;
       // Note: we don't send the CourseRegistration object as part of the response, as currently the client just expects the Course object itself.
       if (
         registrationResult.status === RegisterCourseStatus.AlreadyRegistered
@@ -377,7 +395,11 @@ const functions = {
       }
 
       // Duplicate key (race condition)
-      if (err && err instanceof mongoose.mongo.MongoError && err.code === 11000) {
+      if (
+        err &&
+        err instanceof mongoose.mongo.MongoError &&
+        err.code === 11000
+      ) {
         return res.status(RegisterCourseStatus.AlreadyRegistered).send({
           message: "Course registration: user already registered.",
         });
@@ -390,7 +412,10 @@ const functions = {
       session.endSession();
     }
   },
-  deregisterFromCourse: async function (req: Request<{}, {}, { courseId: string }>, res: Response) {
+  deregisterFromCourse: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { courseId: string }>,
+    res: Response,
+  ) {
     if (!req.body.courseId) {
       logger.warn("Course deregistration failed: course id was not indicated.");
       return res.status(UnregisterCourseStatus.MissingArgument).send({
@@ -428,7 +453,10 @@ const functions = {
       });
     }
   },
-  getRegisteredCoursesForUser: async function (req: Request<{}, {}, {}, { metadataOnly?: string }>, res: Response) {
+  getRegisteredCoursesForUser: async function (
+    req: Express.AuthenticatedRequest<{}, {}, {}, { metadataOnly?: string }>,
+    res: Response,
+  ) {
     const userId = new mongoose.Types.ObjectId(req.token._id);
 
     try {
@@ -476,22 +504,22 @@ const functions = {
       ) {
         return res.status(GetRegisteredCoursesStatus.Retrieved).send({
           message: "Registered courses downloaded.",
-          courses: JSON.parse(JSON.stringify(courses)),
+          courses: courses.map((c) => c.toJSON()),
         });
       }
 
       // Populate courses
-      const populatedCourses = await ModelHelper.populateCourse(courses as CourseDocument[]);
+      let populatedCourses = await ModelHelper.populateCourse(courses);
       if (!populatedCourses) {
         return res.status(GetRegisteredCoursesStatus.InternalError).send({
           message:
             "Registered courses could not be downloaded: error when populating.",
         });
       }
-
+      populatedCourses = populatedCourses as CourseDocument[];
       return res.status(GetRegisteredCoursesStatus.Retrieved).send({
         message: "Registered courses downloaded.",
-        courses: JSON.parse(JSON.stringify(populatedCourses)),
+        courses: populatedCourses.map((c) => c.toJSON()),
       });
     } catch (err: unknown) {
       logger.error(err);
@@ -501,15 +529,21 @@ const functions = {
       });
     }
   },
-  getDemoCourseAccessKey: function (_: Request, res: Response) {
+  getDemoCourseAccessKey: function (
+    _: Express.AuthenticatedRequest,
+    res: Response,
+  ) {
     return res.status(200).send({
       accessKey: "90EA53F0",
       message: "Demo course access key retrieved.",
     });
   },
   // For teachers
-  getUserRegistrationsForCourse: async function (req: Request<{ courseId: string }>, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  getUserRegistrationsForCourse: async function (
+    req: Express.AuthenticatedRequest<{ courseId: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
           "Fetching registered users for course failed: only teachers are authorized.",

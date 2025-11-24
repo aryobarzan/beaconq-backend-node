@@ -4,9 +4,12 @@ import { ActivityArchiveModel } from "../../models/archive/activityArchive";
 import ModelHelper from "../../middleware/modelHelper";
 import mongoose from "mongoose";
 import logger from "../../middleware/logger";
-import { Request, Response } from "express";
+import { Response } from "express";
 
-async function archiveActivity(activity: ActivityDocument, session: mongoose.ClientSession) {
+async function archiveActivity(
+  activity: ActivityDocument,
+  session: mongoose.ClientSession,
+) {
   const activityArchive = new ActivityArchiveModel({ activity });
   return activityArchive.save({ session });
 }
@@ -28,33 +31,45 @@ class CreateOrUpdateActivityPermissionError extends Error {
   constructor() {
     super("Lacking permission to update");
     this.name = "CreateOrUpdateActivityPermissionError";
-    Object.setPrototypeOf(this, CreateOrUpdateActivityPermissionError.prototype);
+    Object.setPrototypeOf(
+      this,
+      CreateOrUpdateActivityPermissionError.prototype,
+    );
   }
 }
 
-var functions = {
-  createOrUpdateActivity: async function (req: Request<{}, {}, { activity: string }>, res: Response) {
-    if (!req.body.activity) {
-      return res.status(CreateOrUpdateActivityStatus.MissingArguments).send({
-        message: "Activity creation failed: activity parameter missing.",
-      });
-    }
-    if (req.token.role !== "TEACHER") {
+const functions = {
+  createOrUpdateActivity: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { activity: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Activity creation failed: only teachers are authorized.",
       });
     }
-    const newActivity = ModelHelper.decodeActivity(JSON.parse(req.body.activity));
+
+    let activityJSON: any;
+    try {
+      activityJSON = JSON.parse(req.body.activity);
+    } catch (err: unknown) {
+      return res.status(CreateOrUpdateActivityStatus.MissingArguments).send({
+        message: "Activity creation failed: activity could not be parsed.",
+      });
+    }
+
+    const newActivity = ModelHelper.decodeActivity(activityJSON);
     if (!newActivity) {
       return res.status(CreateOrUpdateActivityStatus.InternalError).send({
         message:
           "Activity creation failed: activity could not be deserialized.",
       });
     }
+
     let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
-    } catch (err) {
+    } catch (err: unknown) {
       return res.status(CreateOrUpdateActivityStatus.InternalError).send({
         message: `Activity creation/update failed: internal error (session). (${err})`,
       });
@@ -64,9 +79,7 @@ var functions = {
     let responseStatusCode: number = CreateOrUpdateActivityStatus.Updated;
     try {
       await session.withTransaction(async () => {
-        const existingActivity = await ActivityModel.findById(
-          newActivity._id,
-        )
+        const existingActivity = await ActivityModel.findById(newActivity._id)
           .session(session)
           .exec();
         // Create new activity
@@ -77,7 +90,7 @@ var functions = {
             user: req.token._id,
             resourceType: "ACTIVITY",
             resource: savedActivity.id,
-            level: 7,
+            level: PermissionLevel.EXECUTE,
           }).save({ session });
           await archiveActivity(savedActivity, session);
           const populatedActivity =
@@ -152,8 +165,11 @@ var functions = {
       session.endSession();
     }
   },
-  getActivities: async function (req: Request, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  getActivities: async function (
+    req: Express.AuthenticatedRequest,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message: "Activity fetching failed: only teachers are authorized.",
       });
@@ -175,7 +191,7 @@ var functions = {
               $elemMatch: {
                 resourceType: "ACTIVITY",
                 user: new mongoose.Types.ObjectId(req.token._id),
-                level: { $gte: 4 },
+                level: { $gte: PermissionLevel.READ },
               },
             },
           },
@@ -195,7 +211,7 @@ var functions = {
           });
         }
         return res.status(GetActivitiesStatus.Retrieved).send({
-          activities: JSON.parse(JSON.stringify(populatedActivities)),
+          activities: populatedActivities.map((a) => a.toJSON()),
         });
       }
     } catch (err: unknown) {

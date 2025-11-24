@@ -1,8 +1,11 @@
-import { CourseAnnouncementDocument, CourseAnnouncementModel } from "../../models/courseAnnouncement";
+import {
+  CourseAnnouncementDocument,
+  CourseAnnouncementModel,
+} from "../../models/courseAnnouncement";
 import { PermissionModel, hasPermissions } from "../../models/permission";
 import mongoose from "mongoose";
 import logger from "../../middleware/logger";
-import { Request, Response } from "express";
+import { Response } from "express";
 
 // Possible status codes
 enum CreateOrUpdateCourseAnnouncementStatus {
@@ -21,14 +24,19 @@ class CreateOrUpdateCourseAnnouncementPermissionError extends Error {
   constructor() {
     super("Lacking permission to update");
     this.name = "CreateOrUpdateCourseAnnouncementPermissionError";
-    Object.setPrototypeOf(this, CreateOrUpdateCourseAnnouncementPermissionError.prototype);
+    Object.setPrototypeOf(
+      this,
+      CreateOrUpdateCourseAnnouncementPermissionError.prototype,
+    );
   }
 }
 
-
 const functions = {
-  createOrUpdateCourseAnnouncement: async function (req: Request<{}, {}, { courseAnnouncement: string }>, res: Response) {
-    if (req.token.role !== "TEACHER") {
+  createOrUpdateCourseAnnouncement: async function (
+    req: Express.AuthenticatedRequest<{}, {}, { courseAnnouncement: string }>,
+    res: Response,
+  ) {
+    if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
           "Course announcement creation failed: only teachers are authorized.",
@@ -70,7 +78,8 @@ const functions = {
     }
 
     try {
-      let responseStatus: number = CreateOrUpdateCourseAnnouncementStatus.Updated;
+      let responseStatus: number =
+        CreateOrUpdateCourseAnnouncementStatus.Updated;
       let savedAnnouncement: CourseAnnouncementDocument | null = null;
 
       await session.withTransaction(async () => {
@@ -85,7 +94,9 @@ const functions = {
 
         if (!existingAnnouncement) {
           // Create new announcement
-          const newAnnouncement = new CourseAnnouncementModel(incomingAnnouncement);
+          const newAnnouncement = new CourseAnnouncementModel(
+            incomingAnnouncement,
+          );
           savedAnnouncement = await newAnnouncement.save({ session });
 
           // Create permission for the creator within same transaction
@@ -93,7 +104,7 @@ const functions = {
             user: req.token._id,
             resourceType: "COURSE_ANNOUNCEMENT",
             resource: savedAnnouncement._id,
-            level: 7,
+            level: PermissionLevel.EXECUTE,
           });
           await perm.save({ session });
 
@@ -118,7 +129,9 @@ const functions = {
             throw new CreateOrUpdateCourseAnnouncementPermissionError();
           }
 
-          const newAnnouncement = new CourseAnnouncementModel(incomingAnnouncement);
+          const newAnnouncement = new CourseAnnouncementModel(
+            incomingAnnouncement,
+          );
           newAnnouncement.version = existingAnnouncement.version + 1;
           /// Set {new: true} such that the updated model is returned by mongoose
           const updatedAnnouncement =
@@ -171,7 +184,15 @@ const functions = {
       session.endSession();
     }
   },
-  getCourseAnnouncements: async function (req: Request<{ courseId: string }, {}, {}, { recentOnly?: string }>, res: Response) {
+  getCourseAnnouncements: async function (
+    req: Express.AuthenticatedRequest<
+      { courseId: string },
+      {},
+      {},
+      { recentOnly?: string }
+    >,
+    res: Response,
+  ) {
     if (!req.params.courseId) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message: "Course announcements fetching failed: parameter missing.",
@@ -214,7 +235,14 @@ const functions = {
       });
     }
   },
-  getCourseAnnouncementsForCourses: async function (req: Request<{}, {}, { courseIds: string, recentOnly: string }>, res: Response) {
+  getCourseAnnouncementsForCourses: async function (
+    req: Express.AuthenticatedRequest<
+      {},
+      {},
+      { courseIds: string; recentOnly: string }
+    >,
+    res: Response,
+  ) {
     if (!req.body.courseIds) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message:
