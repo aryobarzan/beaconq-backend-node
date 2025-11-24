@@ -40,10 +40,8 @@ var userAchievementSchema = new Schema(
 );
 userAchievementSchema.index({ achievement: 1, user: 1 }, { unique: true });
 
-const UserAchievementModel: Model<UserAchievementDocument> =
+export const UserAchievementModel: Model<UserAchievementDocument> =
   mongoose.model<UserAchievementDocument>(
     "UserAchievement",
     userAchievementSchema,
   );
-
-export { userAchievementSchema as schema, UserAchievementModel as model };

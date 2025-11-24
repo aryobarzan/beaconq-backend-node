@@ -66,7 +66,5 @@ const achievementSchema = new Schema(
   },
   { collection: "achievements", timestamps: true },
 );
-const AchievementModel: Model<AchievementDocument> =
+export const AchievementModel: Model<AchievementDocument> =
   mongoose.model<AchievementDocument>("Achievement", achievementSchema);
-
-export { achievementSchema as schema, AchievementModel as model };
