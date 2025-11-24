@@ -1,25 +1,26 @@
 /*global __dirname, a*/
 
 // server.js: server initialization, including database connection (MongoDB) and Firebase Admin
-const path = require("path");
+import path from "path";
 global.appRoot = path.resolve(__dirname);
 
-const process = require("process");
-const express = require("express");
-const cors = require("cors");
-const connectDB = require("./config/db");
-const passport = require("passport");
-const routes = require("./routes/routes");
-const secureRoutes = require("./routes/secureRoutes");
-const auth = require("./middleware/auth");
-const helmet = require("helmet");
-const compression = require("compression");
-const requestLogger = require("./middleware/requestLogger");
-const logger = require("./middleware/logger");
-const firebaseAdmin = require("firebase-admin");
-const firebaseHelper = require("./middleware/firebaseHelper");
-const { swaggerSpec } = require("./swagger");
-const swaggerUi = require("swagger-ui-express");
+import process from "process";
+import express from "express";
+import cors from "cors";
+import connectDB from "./config/db";
+import passport from "passport";
+import routes from "./routes/routes";
+import secureRoutes from "./routes/secureRoutes";
+import auth from "./middleware/auth";
+import helmet from "helmet";
+import compression from "compression";
+import * as requestLogger from "./middleware/requestLogger";
+import logger from "./middleware/logger";
+import firebaseAdmin from "firebase-admin";
+import firebaseHelper from "./middleware/firebaseHelper";
+import { Server } from "http";
+import { swaggerSpec } from "./swagger";
+import swaggerUi from "swagger-ui-express";
 
 // set timezone
 process.env.TZ = "Europe/Amsterdam";
@@ -40,8 +41,7 @@ function validateEnv() {
   return true;
 }
 
-let server;
-let firebaseApp;
+let server: Server | undefined;
 let isShuttingDown = false;
 
 // Firebase Cloud Messaging (via firebase-admin sdk): Used for push notification scheduling (scheduled quizzes)
@@ -55,24 +55,24 @@ async function initFirebase() {
   }
   try {
     const serviceAccount = require(credPath);
-    firebaseApp = firebaseAdmin.initializeApp({
+    firebaseAdmin.initializeApp({
       credential: firebaseAdmin.credential.cert(serviceAccount),
     });
     logger.info("Firebase admin initialized");
-  } catch (err) {
-    logger.error("Failed to initialize Firebase admin:", err);
+  } catch (err: unknown) {
+    logger.error(`Failed to initialize Firebase admin: ${err}`);
     throw err;
   }
 }
 
 function setGlobalHandlers() {
   process.on("uncaughtException", (err) => {
-    logger.error("Uncaught exception - exiting:", err);
+    logger.error(`Uncaught exception - exiting: ${err}`);
     gracefulShutdown(1);
   });
 
   process.on("unhandledRejection", (reason) => {
-    logger.error("Unhandled Rejection - exiting:", reason);
+    logger.error(`Unhandled Rejection - exiting: ${reason}`);
     gracefulShutdown(1);
   });
 
@@ -95,8 +95,8 @@ async function gracefulShutdown(exitCode = 0, restart = false) {
     if (server) {
       logger.info("Closing server...");
       // stop accepting new connections
-      server.close((err) => {
-        if (err) logger.error("Error closing server:", err);
+      server.close((err: unknown) => {
+        if (err) logger.error(`Error closing server: ${err}`);
       });
       // wait a small duration in case of remaining connections
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -108,8 +108,8 @@ async function gracefulShutdown(exitCode = 0, restart = false) {
         await firebaseHelper.shutdown();
         logger.info("Firebase shutdown completed.");
       }
-    } catch (err) {
-      logger.error("Error shutting down firebase:", err);
+    } catch (err: unknown) {
+      logger.error(`Error shutting down firebase: ${err}`);
     }
 
     // close DB connection
@@ -117,18 +117,18 @@ async function gracefulShutdown(exitCode = 0, restart = false) {
       const mongoose = require("mongoose");
       await mongoose.connection.close(false);
       logger.info("DB connection closed.");
-    } catch (err) {
-      logger.error("Error closing DB:", err);
+    } catch (err: unknown) {
+      logger.error(`Error closing DB: ${err}`);
     }
 
     // flush request logger buffers
     try {
       await requestLogger.shutdownAndFlush();
-    } catch (err) {
-      console.error("Error flushing request logger during shutdown", err);
+    } catch (err: unknown) {
+      logger.error(`Error flushing request logger during shutdown: ${err}`);
     }
-  } catch (err) {
-    logger.error("Error during graceful shutdown:", err);
+  } catch (err: unknown) {
+    logger.error(`Error during graceful shutdown: ${err}`);
   } finally {
     if (!restart) process.exit(exitCode);
   }
@@ -145,8 +145,8 @@ async function main() {
   try {
     await connectDB();
     logger.info("DB connected.");
-  } catch (err) {
-    logger.error("Failed to connect to DB - exiting", err);
+  } catch (err: unknown) {
+    logger.error(`Failed to connect to DB - exiting: ${err}`);
     process.exit(1);
   }
 
@@ -154,10 +154,9 @@ async function main() {
   try {
     await initFirebase();
     firebaseHelper.setupNotifications();
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error(
-      "Firebase initialization failed - continuing without firebase",
-      err,
+      `Firebase initialization failed - continuing without firebase: ${err}`,
     );
   }
 
@@ -193,17 +192,30 @@ async function main() {
     res.status(404).send("Unknown resource!");
   });
 
-  app.use((err, req, res, next) => {
-    if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
-      logger.error(`Invalid JSON body: ${err.message || err}`);
-      return res.status(400).json({
-        status: false,
-        error: "The JSON in the request body could not be parsed.",
-      });
-    }
-    logger.error(err);
-    res.status(500).send("Sorry, something went wrong!");
-  });
+  app.use(
+    (
+      err: any,
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      // Check for JSON parse errors from body-parser/express.json()
+      if (
+        err instanceof SyntaxError &&
+        "status" in err &&
+        err.status === 400 &&
+        "body" in err
+      ) {
+        logger.error(`Invalid JSON body: ${err.message || err}`);
+        return res.status(400).json({
+          status: false,
+          error: "The JSON in the request body could not be parsed.",
+        });
+      }
+      logger.error(err);
+      res.status(500).send("Sorry, something went wrong!");
+    },
+  );
 
   app.get("/robots.txt", function (req, res) {
     res.type("text/plain");
@@ -223,7 +235,7 @@ async function main() {
   // server.headersTimeout = 62000;
 }
 
-main().catch((err) => {
-  logger.error("Fatal startup error:", err);
+main().catch((err: unknown) => {
+  logger.error(`Fatal startup error: ${err}`);
   process.exit(1);
 });
