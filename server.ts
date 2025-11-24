@@ -176,7 +176,7 @@ async function main() {
   // pino-http middleware
   app.use(requestLogger.createHttpLogger());
 
-  app.get("/health", (req, res) => res.status(200).send("OK"));
+  app.get("/health", (_req, res) => res.status(200).send("OK"));
 
   // routes
   app.use(routes);
@@ -188,16 +188,16 @@ async function main() {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // custom 404 + JSON parse error handler + global fallback
-  app.use((req, res, next) => {
+  app.use((_req, res, _next) => {
     res.status(404).send("Unknown resource!");
   });
 
   app.use(
     (
       err: any,
-      req: express.Request,
+      _req: express.Request,
       res: express.Response,
-      next: express.NextFunction,
+      _next: express.NextFunction,
     ) => {
       // Check for JSON parse errors from body-parser/express.json()
       if (
@@ -217,7 +217,7 @@ async function main() {
     },
   );
 
-  app.get("/robots.txt", function (req, res) {
+  app.get("/robots.txt", function (_req, res) {
     res.type("text/plain");
     res.set("Cache-Control", "public, max-age=86400"); // 24 hour cache to avoid repetitive fetching by robot clients
     res.send("User-agent: *\nDisallow: /");

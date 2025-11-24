@@ -21,10 +21,10 @@
 
     // Additional Checks - Enable when ready
     "noUnusedLocals": true,
-    "noUnusedParameters": false,
+    "noUnusedParameters": true,
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": false,
+    "noUncheckedIndexedAccess": true,
 
     // Other Options
     "skipLibCheck": true,
