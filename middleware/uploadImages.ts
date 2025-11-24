@@ -1,12 +1,14 @@
-const util = require("util");
-const multer = require("multer");
-const process = require("process");
-const path = require("path");
-const crypto = require("crypto");
-const { Readable } = require("stream");
-const { pipeline } = require("stream/promises");
-const mongoose = require("mongoose");
-const { GridFSBucket } = require("mongodb");
+import util from "util";
+import multer from "multer";
+import process from "process";
+import path from "path";
+import crypto from "crypto";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
+import mongoose from "mongoose";
+import { Request, Response } from "express";
+
+const GridFSBucket = mongoose.mongo.GridFSBucket;
 
 // const imageBucket = new mongo.GridFSBucket(mongoose.connection.db, {
 //   bucketName: process.env.DATABASE_IMAGE_BUCKET,
@@ -27,7 +29,7 @@ const MAX_FILES = parseInt(process.env.UPLOAD_MAX_FILES || `10`, 10);
 const DEFAULT_IMAGE_BUCKET = process.env.DATABASE_IMAGE_BUCKET || "images";
 
 // Generate a random UUID while retaining the original file's extension
-function getUniqueFileName(originalName) {
+function getUniqueFileName(originalName: string) {
   const ext = path.extname(originalName) || "";
   return `${crypto.randomUUID()}${ext}`;
 }
@@ -40,7 +42,11 @@ function stripHtml(input = "") {
 }
 
 // Detect if non-allowed image types have been provided based on their MIME
-function imageFileFilter(req, file, cb) {
+function imageFileFilter(
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) {
   if (!ALLOWED_MIMES.includes(file.mimetype)) {
     return cb(
       new multer.MulterError(
@@ -70,7 +76,11 @@ const uploadGalleryImage = multer({
 }).single("file");
 const uploadGalleryImageMiddleware = util.promisify(uploadGalleryImage);
 
-async function _storeBufferToGridFS(bucketName, file, metadata = {}) {
+async function _storeBufferToGridFS(
+  bucketName: string,
+  file: Express.Multer.File,
+  metadata = {},
+) {
   const bucket = new GridFSBucket(mongoose.connection.db, { bucketName });
   const filename = getUniqueFileName(file.originalname);
 
@@ -97,12 +107,12 @@ async function _storeBufferToGridFS(bucketName, file, metadata = {}) {
 }
 
 // promise-based handlers
-async function uploadFilesHandler(req, res) {
+async function uploadFilesHandler(req: Request, res: Response) {
   // No try-catch: the caller shall handle the HTTP response
 
   await uploadFilesMiddleware(req, res);
   // write each buffered file to GridFS and attach results to req.files
-  if (!req.files || req.files.length === 0) return;
+  if (!req.files || !Array.isArray(req.files) || req.files.length === 0) return;
 
   const results = [];
   for (const f of req.files) {
@@ -114,7 +124,10 @@ async function uploadFilesHandler(req, res) {
   return;
 }
 
-async function uploadGalleryImageHandler(req, res) {
+async function uploadGalleryImageHandler(
+  req: Request<{}, {}, {}, { title?: string; caption?: string }>,
+  res: Response,
+) {
   // No try-catch: the caller shall handle the HTTP response
 
   await uploadGalleryImageMiddleware(req, res);
@@ -123,15 +136,18 @@ async function uploadGalleryImageHandler(req, res) {
   const title = stripHtml(req.query && req.query.title);
   const caption = stripHtml(req.query && req.query.caption);
 
-  const metadata = {};
+  const metadata: { author?: string; title?: string; caption?: string } = {};
   if (req && req.token && req.token._id) metadata.author = req.token._id;
   if (title) metadata.title = title.slice(0, 200);
   if (caption) metadata.caption = caption.slice(0, 1000);
 
   const info = await _storeBufferToGridFS(GALLERY_BUCKET, req.file, metadata);
-  req.file = info;
+  // TODO: verify if valid
+  (req.file as any) = info;
   return;
 }
 
-module.exports.uploadFilesHandler = uploadFilesHandler;
-module.exports.uploadGalleryImageHandler = uploadGalleryImageHandler;
+export default {
+  uploadFilesHandler,
+  uploadGalleryImageHandler,
+};

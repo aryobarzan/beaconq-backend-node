@@ -1,6 +1,8 @@
+import multer from "multer";
+
 // Helper function to map MulterErrors to standard HTTP status codes alongside an explanatory message
-function mapMulterError(err) {
-  if (!err || !err.code) return null;
+function mapMulterError(err: unknown) {
+  if (!err || !(err instanceof multer.MulterError) || !err.code) return null;
   const code = err.code;
 
   if (code === "LIMIT_FILE_SIZE") {
@@ -29,4 +31,4 @@ function mapMulterError(err) {
   return { status: 400, body: { message: err.message || "Upload error." } };
 }
 
-module.exports = { mapMulterError };
+export default { mapMulterError };
