@@ -1,11 +1,13 @@
-const upload = require("../middleware/uploadImages");
-const process = require("process");
-const mongoose = require("mongoose");
-const GridFSBucket = require("mongodb").GridFSBucket;
-const logger = require("../middleware/logger");
-const { mapMulterError } = require("../middleware/uploadErrorMapper");
+import upload from "../middleware/uploadImages";
+import process from "process";
+import mongoose from "mongoose";
+import logger from "../middleware/logger";
+import { mapMulterError } from "../middleware/uploadErrorMapper";
+import { Request, Response } from "express";
 
-const uploadImages = async (req, res) => {
+const GridFSBucket = mongoose.mongo.GridFSBucket;
+
+const uploadImages = async (req: Request, res: Response) => {
   try {
     await upload.uploadFilesHandler(req, res);
     if (!req.files || req.files.length === 0) {
@@ -17,16 +19,19 @@ const uploadImages = async (req, res) => {
       message: "Images have been uploaded.",
       images: req.files,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error(err);
     const mapped = mapMulterError(err);
     if (mapped) return res.status(mapped.status).send(mapped.body);
     return res.status(500).send({
-      message: `Error while uploading image(s): ${err?.message || "internal error"}`,
+      message: `Error while uploading image(s): ${err}`,
     });
   }
 };
-const downloadImage = async (req, res) => {
+const downloadImage = async (
+  req: Request<{}, {}, {}, { id: string }>,
+  res: Response,
+) => {
   if (!req.query.id) {
     return res.status(400).send({ message: "Error: Specify the image's id." });
   }
@@ -35,7 +40,7 @@ const downloadImage = async (req, res) => {
       bucketName: process.env.DATABASE_IMAGE_BUCKET,
     });
     let downloadStream = bucket.openDownloadStream(
-      mongoose.Types.ObjectId(req.query.id),
+      new mongoose.Types.ObjectId(req.query.id),
     );
     downloadStream.on("data", function (data) {
       return res.status(200).write(data);
@@ -47,45 +52,54 @@ const downloadImage = async (req, res) => {
     downloadStream.on("end", () => {
       return res.end();
     });
-  } catch (error) {
-    logger.error(error);
+  } catch (err: unknown) {
+    logger.error(err);
     return res.status(500).send({
-      message: error.message,
+      message: `Image download failed: ${err}`,
     });
   }
 };
 
-const deleteImages = async (req, res) => {
+const deleteImages = async (
+  req: Request<{}, {}, { images: string }>,
+  res: Response,
+) => {
   if (!req.body.images) {
     return res.status(400).send({ message: "Error: Specify the images' ids." });
   }
-  var deletedCount = 0;
+  let deletedCount = 0;
   try {
     const bucket = new GridFSBucket(mongoose.connection.db, {
       bucketName: process.env.DATABASE_IMAGE_BUCKET,
     });
-    var imageIds = JSON.parse(req.body.images);
-    for (let i = 0; i < imageIds.length; i++) {
-      try {
-        await bucket.delete(mongoose.Types.ObjectId(imageIds[i]));
-        deletedCount += 1;
-      } catch (error) {
-        logger.error(error);
+    const imageIds = JSON.parse(req.body.images);
+    if (Array.isArray(imageIds)) {
+      for (const imageId of imageIds) {
+        try {
+          await bucket.delete(new mongoose.Types.ObjectId(String(imageId)));
+          deletedCount += 1;
+        } catch (err: unknown) {
+          logger.error(err);
+        }
       }
     }
+
     return res
       .status(200)
       .send({ message: "Deleted images.", deletedCount: deletedCount });
-  } catch (error) {
-    logger.error(error);
+  } catch (err: unknown) {
+    logger.error(err);
     return res.status(500).send({
-      message: error.message,
+      message: `Failed to delete images: ${err}`,
     });
   }
 };
 
 // Gallery Images
-const uploadGalleryImage = async (req, res) => {
+const uploadGalleryImage = async (
+  req: Request<{}, {}, {}, { title: string; caption: string }>,
+  res: Response,
+) => {
   if (!req.query.title || !req.query.caption) {
     return res
       .status(400)
@@ -100,19 +114,22 @@ const uploadGalleryImage = async (req, res) => {
       message: "Gallery image uploaded.",
       image: req.file,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error(err);
     const mapped = mapMulterError(err);
     if (mapped) {
       return res.status(mapped.status).send(mapped.body);
     }
     return res.status(500).send({
-      message: `Error while uploading gallery image: ${err?.message || "internal error"}`,
+      message: `Error while uploading gallery image: ${err}`,
     });
   }
 };
 
-const downloadGalleryImage = async (req, res) => {
+const downloadGalleryImage = async (
+  req: Request<{ imageId: string }>,
+  res: Response,
+) => {
   if (!req.params.imageId) {
     return res.status(400).send({ message: "Error: Specify the image's id." });
   }
@@ -125,7 +142,7 @@ const downloadGalleryImage = async (req, res) => {
       "gallery_images" + ".files",
     );
     const document = await galleryImagesCollection.findOne({
-      _id: mongoose.Types.ObjectId(req.params.imageId),
+      _id: new mongoose.Types.ObjectId(req.params.imageId),
     });
     if (!document) {
       return res.status(500).send({
@@ -136,7 +153,7 @@ const downloadGalleryImage = async (req, res) => {
     res.set("caption", document.metadata.caption);
     res.set("id", req.params.imageId);
     let downloadStream = bucket.openDownloadStream(
-      mongoose.Types.ObjectId(req.params.imageId),
+      new mongoose.Types.ObjectId(req.params.imageId),
     );
     downloadStream.on("data", function (data) {
       return res.status(200).write(data);
@@ -148,44 +165,53 @@ const downloadGalleryImage = async (req, res) => {
     downloadStream.on("end", () => {
       return res.end();
     });
-  } catch (error) {
-    logger.error(error);
+  } catch (err: unknown) {
+    logger.error(err);
     return res.status(500).send({
-      message: error.message,
+      message: `Failed to download image details: ${err}`,
     });
   }
 };
 
-const deleteGalleryImages = async (req, res) => {
+const deleteGalleryImages = async (
+  req: Request<{}, {}, { images: string }>,
+  res: Response,
+) => {
   if (!req.body.images) {
     return res.status(400).send({ message: "Error: Specify the images' ids." });
   }
-  var deletedCount = 0;
+  let deletedCount = 0;
   try {
     const bucket = new GridFSBucket(mongoose.connection.db, {
       bucketName: "gallery_images",
     });
-    var imageIds = JSON.parse(req.body.images);
-    for (let i = 0; i < imageIds.length; i++) {
-      try {
-        await bucket.delete(mongoose.Types.ObjectId(imageIds[i]));
-        deletedCount += 1;
-      } catch (error) {
-        logger.error(error);
+    const imageIds = JSON.parse(req.body.images);
+    if (Array.isArray(imageIds)) {
+      for (const imageId of imageIds) {
+        try {
+          await bucket.delete(new mongoose.Types.ObjectId(String(imageId)));
+          deletedCount += 1;
+        } catch (err: unknown) {
+          logger.error(err);
+        }
       }
     }
-    res
+
+    return res
       .status(200)
       .send({ message: "Deleted images.", deletedCount: deletedCount });
-  } catch (error) {
-    logger.error(error);
+  } catch (err: unknown) {
+    logger.error(err);
     return res.status(500).send({
-      message: error.message,
+      message: `Failed to delete gallery images: ${err}`,
     });
   }
 };
 
-const getGalleryImageIdentifiers = async (req, res) => {
+const getGalleryImageIdentifiers = async (
+  req: Express.AuthenticatedRequest,
+  res: Response,
+) => {
   try {
     const authorId = req.token._id;
     const bucket = process.env.GALLERY_BUCKET || "gallery_images";
@@ -219,19 +245,20 @@ const getGalleryImageIdentifiers = async (req, res) => {
     }));
 
     if (items.length == 0) {
-      res.status(209).send({
+      return res.status(209).send({
         message: "No gallery images found.",
       });
-      return;
     }
     return res.status(200).send(items);
-  } catch (error) {
-    logger.error(error);
-    return res.status(500).send({ message: "Failed to list gallery images." });
+  } catch (err: unknown) {
+    logger.error(err);
+    return res
+      .status(500)
+      .send({ message: `Failed to list gallery images: ${err}` });
   }
 };
 
-module.exports = {
+export default {
   uploadImages,
   downloadImage,
   deleteImages,
