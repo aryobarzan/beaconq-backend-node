@@ -31,6 +31,7 @@ services:
       sh -c "cp /tmp/mongo-keyfile /keyfile/mongo-keyfile &&
              chown 999:999 /keyfile/mongo-keyfile &&
              chmod 400 /keyfile/mongo-keyfile"
+    restart: no
     volumes:
       - ./mongo-keyfile:/tmp/mongo-keyfile:ro
       - mongo-keyfile-volume:/keyfile
@@ -72,6 +73,7 @@ services:
       timeout: 10s
       start_period: 10s
       retries: 10
+    restart: unless-stopped
     volumes:
       - mongo1-data:/data/db
       - mongo1-config:/data/configdb
@@ -93,6 +95,7 @@ services:
         "/keyfile/mongo-keyfile",
         "--quiet",
       ]
+    restart: unless-stopped
     ports:
       - 27018:27018
     depends_on:
@@ -117,6 +120,7 @@ services:
         "/keyfile/mongo-keyfile",
         "--quiet",
       ]
+    restart: unless-stopped
     ports:
       - 27019:27019
     depends_on:
@@ -125,6 +129,25 @@ services:
       - mongo3-data:/data/db
       - mongo3-config:/data/configdb
       - mongo-keyfile-volume:/keyfile
+    networks:
+      - backend
+  mongo-backup:
+    image: mongo:8.2.1
+    depends_on:
+      mongo1:
+        condition: service_healthy
+    environment:
+      MONGO_HOST: mongo1
+      MONGO_PORT: 27017
+      MONGO_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      BACKUP_RETENTION_DAYS: 7
+      BACKUP_INTERVAL: 86400 # 24 hours (daily)
+    volumes:
+      - ./backups:/backup
+      - ./scripts/mongoDBDockerBackup.sh:/backup.sh
+    entrypoint: /backup.sh
+    restart: unless-stopped
     networks:
       - backend
 

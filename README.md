@@ -5,6 +5,25 @@
 
 Backend for the quiz platform "BEACON Q" ([Play Store](https://play.google.com/store/apps/details?id=lu.uni.coast.beacon_q_app), [App Store](https://apps.apple.com/us/app/beacon-q/id1643852992)), based on Node.js and MongoDB.
 
+**Overview**:
+
+- ✅ TypeScript
+- ✅ Rotating logs
+- ✅ MongoDB transactions (requires replica set)
+- ✅ Interactive API documentation (Swagger)
+  - Script for automatic schema generation (see `scripts/generateSchemas.js`)
+- ✅ Docker
+  - MongoDB replica set (3 nodes)
+  - Automatic MongoDB initialization (keyfile, replica set initialization, user creation; see `docker-compose.yml` and `mongo-init.js.example`)
+  - Automatic daily MongoDB backup (see `scripts/mongoDBDockerBackup.sh`)
+  - Automatic restart for services
+  - Multi-stage build (see `Dockerfile`)
+  - Separate communication network for services
+
+## Linting & formatting
+
+`ESLint` and `Prettier` are used for automatic pre-commit linting and formatting of code using the `husky` and `lint-staged` packages. (see `package.json` and `.husky/pre-commit`)
+
 ## Docker
 
 A `Dockerfile` and `docker-compose.yaml` are included to easily get both the Node.js and MongoDB replica set up and running:
