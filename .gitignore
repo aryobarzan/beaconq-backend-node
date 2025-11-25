@@ -12,6 +12,7 @@ mongo-keyfile
 # security
 
 # -------------------------
+backups/
 dist/
 mongo-init.js
 log/

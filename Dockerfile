@@ -16,8 +16,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate schemas and build TypeScript
+# Generate schemas for interactive API docs (swagger)
 RUN npm run generate:schemas
+# build TypeScript -> output to /dist
 RUN npm run build
 
 # Stage 2: Production
@@ -29,13 +30,13 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ONLY production dependencies
-RUN npm ci --only=production && \
+RUN npm ci --omit=dev --ignore-scripts && \
     npm upgrade jwa && \
     npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/swagger ./swagger
+COPY --from=builder /app/schemas ./dist/schemas
 
 # Copy necessary runtime files
 COPY mongo-init.js ./

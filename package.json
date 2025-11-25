@@ -1,13 +1,11 @@
 {
   "name": "project-elpis-server",
   "version": "3.0.0",
-  "type": "module",
   "description": "Back-end server for Project Elpis ('BEACON Q')",
   "main": "dist/server.js",
   "scripts": {
     "generate:schemas": "node scripts/generateSchemas.js",
     "predev": "npm run generate:schemas",
-    "prebuild": "npm run generate:schemas",
     "build": "tsc -p .",
     "build:watch": "tsc -p . --watch",
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
