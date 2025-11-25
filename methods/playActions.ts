@@ -1,15 +1,15 @@
-import { ActivityUserAnswerModel } from "../models/logs/activityUserAnswer";
-import { QuizModel } from "../models/quiz";
-import mongoose from "mongoose";
-import { ScheduledQuizUserStartModel } from "../models/logs/scheduledQuizUserStart";
-import ModelHelper from "../middleware/modelHelper";
-import { DateTime } from "luxon";
-import logger from "../middleware/logger";
-import SurveyHelper from "../middleware/surveyHelper";
-import { PlayContextModel } from "../models/logs/playContext";
-import { CourseDocument, CourseModel } from "../models/course";
-import { ScheduledQuizDocument } from "../models/scheduledQuiz";
-import { Response } from "express";
+import { ActivityUserAnswerModel } from '../models/logs/activityUserAnswer';
+import { QuizModel } from '../models/quiz';
+import mongoose from 'mongoose';
+import { ScheduledQuizUserStartModel } from '../models/logs/scheduledQuizUserStart';
+import ModelHelper from '../middleware/modelHelper';
+import { DateTime } from 'luxon';
+import logger from '../middleware/logger';
+import SurveyHelper from '../middleware/surveyHelper';
+import { PlayContextModel } from '../models/logs/playContext';
+import { CourseDocument, CourseModel } from '../models/course';
+import { ScheduledQuizDocument } from '../models/scheduledQuiz';
+import { Response } from 'express';
 
 // Possible status codes
 enum ScheduledQuizStatus {
@@ -26,11 +26,11 @@ enum CheckScheduledQuizzesStatus {
 }
 enum PlayScheduledQuizStatus {
   CanPlay = 200,
+  AlreadyPlayedAllActivities = 209,
+  NotYetAvailable = 210,
   MissingArguments = 400,
   InvalidScheduledQuizId = 452,
   PlayPeriodOver = 455,
-  AlreadyPlayedAllActivities = 209,
-  NotYetAvailable = 210,
   InternalError = 500,
 }
 enum CheckScheduledQuizSurveyStatus {
@@ -52,14 +52,14 @@ enum TrialQuizPlayStatusCode {
 async function checkScheduledQuizUserStatus(
   scheduledQuizId: string,
   userIdString: string,
-  excludeOld: boolean,
+  excludeOld: boolean
 ) {
   try {
     const userId = new mongoose.Types.ObjectId(userIdString);
     const scheduledQuiz = await ModelHelper.findScheduledQuiz(scheduledQuizId);
     if (!scheduledQuiz) {
       return {
-        err: new Error("Scheduled quiz does not exist."),
+        err: new Error('Scheduled quiz does not exist.'),
         quizStatus: null,
         availableActivities: null,
         availablePlayTime: null,
@@ -70,7 +70,7 @@ async function checkScheduledQuizUserStatus(
     const quiz = await QuizModel.findById(scheduledQuiz.quiz).lean().exec();
     if (!quiz) {
       return {
-        err: new Error("Quiz does not exist."),
+        err: new Error('Quiz does not exist.'),
         quizStatus: null,
         availableActivities: null,
         availablePlayTime: null,
@@ -85,7 +85,7 @@ async function checkScheduledQuizUserStatus(
     if (!scheduledQuiz.startDateTime || !scheduledQuiz.endDateTime) {
       logger.warn(`Scheduled quiz missing start/end date: ${scheduledQuizId}`);
       return {
-        err: new Error("Scheduled quiz missing scheduling dates."),
+        err: new Error('Scheduled quiz missing scheduling dates.'),
         quizStatus: null,
         availableActivities: null,
         availablePlayTime: null,
@@ -94,14 +94,14 @@ async function checkScheduledQuizUserStatus(
       };
     }
 
-    const currentDate = DateTime.now().setZone("utc");
+    const currentDate = DateTime.now().setZone('utc');
     const scheduledQuizStartDateTime = DateTime.fromJSDate(
       scheduledQuiz.startDateTime,
-      { zone: "utc" },
+      { zone: 'utc' }
     );
     const scheduledQuizEndDateTime = DateTime.fromJSDate(
       scheduledQuiz.endDateTime,
-      { zone: "utc" },
+      { zone: 'utc' }
     );
 
     // If it's an older scheduled quiz which has expired, don't analyze it and just return null.
@@ -109,7 +109,7 @@ async function checkScheduledQuizUserStatus(
     if (
       excludeOld &&
       currentDate > scheduledQuizEndDateTime &&
-      currentDate.diff(scheduledQuizEndDateTime, "months").as("months") > 4
+      currentDate.diff(scheduledQuizEndDateTime, 'months').as('months') > 4
     ) {
       return {
         isOld: true,
@@ -145,7 +145,7 @@ async function checkScheduledQuizUserStatus(
     const [activityUserAnswers, scheduledQuizUserStart] = await Promise.all([
       ActivityUserAnswerModel.find(
         { scheduledQuiz: scheduledQuiz._id, user: userId },
-        "activity -_id",
+        'activity -_id'
       )
         .lean()
         .exec(),
@@ -158,11 +158,11 @@ async function checkScheduledQuizUserStatus(
     ]);
     // Use set for O(1) lookups when using has(...)
     const playedActivitiesSet = new Set(
-      (activityUserAnswers || []).map((e) => e.activity.toString()),
+      (activityUserAnswers || []).map((e) => e.activity.toString())
     );
 
     const availableActivities = possibleActivities.filter(
-      (activityId) => !playedActivitiesSet.has(activityId),
+      (activityId) => !playedActivitiesSet.has(activityId)
     );
 
     // Has not started the scheduled quiz yet
@@ -195,15 +195,15 @@ async function checkScheduledQuizUserStatus(
     // Note: scheduledQuiz.playDuration is in microseconds
     const scheduledQuizStartDate = DateTime.fromJSDate(
       scheduledQuizUserStart.serverTimestamp,
-      { zone: "utc" },
+      { zone: 'utc' }
     );
 
     const playDurationMicro = scheduledQuiz.playDuration || 0;
     const playDurationSeconds = playDurationMicro / 1_000_000;
 
     const elapsedSeconds = currentDate
-      .diff(scheduledQuizStartDate, "seconds")
-      .as("seconds");
+      .diff(scheduledQuizStartDate, 'seconds')
+      .as('seconds');
     let remainingSeconds = playDurationSeconds - elapsedSeconds;
 
     // Ensure a minimum value of 0
@@ -216,13 +216,13 @@ async function checkScheduledQuizUserStatus(
     // Check survey status
     const surveyStatus = await SurveyHelper.checkScheduledQuizSurveyUserStatus(
       userId.toString(),
-      scheduledQuiz,
+      scheduledQuiz
       // TODO: verify if removed arguments is valid
     );
 
     if (!surveyStatus) {
       return {
-        err: new Error("Survey status could not be checked."),
+        err: new Error('Survey status could not be checked.'),
         quizStatus: null,
         availableActivities: null,
         availablePlayTime: null,
@@ -244,7 +244,7 @@ async function checkScheduledQuizUserStatus(
     // After finishing the scheduled quiz, give the user up to 1 additional day to answer the survey questions associated with the scheduled quiz.
     const canNoLongerTakeSurvey =
       !isWithinPlayPeriod &&
-      currentDate.diff(scheduledQuizEndDateTime, "days").as("days") > 1;
+      currentDate.diff(scheduledQuizEndDateTime, 'days').as('days') > 1;
     if (canNoLongerTakeSurvey) {
       surveyStatus.questions = null;
     }
@@ -304,7 +304,7 @@ async function checkScheduledQuizUserStatus(
 
 async function checkScheduledQuizzesUserStatus(
   coursesRaw: CourseDocument[],
-  userId: string,
+  userId: string
 ) {
   const courses = Array.isArray(coursesRaw) ? coursesRaw : [coursesRaw];
   const courseStatuses = {};
@@ -324,7 +324,7 @@ async function checkScheduledQuizzesUserStatus(
           err: any;
         }
     >,
-    batchSize: number = 20,
+    batchSize: number = 20
   ) {
     const output: PromiseSettledResult<
       | {
@@ -364,27 +364,27 @@ async function checkScheduledQuizzesUserStatus(
       const settledPromises = await mapInBatches(scheduledQuizzes, (sq) =>
         checkScheduledQuizUserStatus(sq._id.toString(), userId, true)
           .then((res) => ({ scheduledQuizId: sq._id, ok: true, res }))
-          .catch((err) => ({ scheduledQuizId: sq._id, ok: false, err })),
+          .catch((err) => ({ scheduledQuizId: sq._id, ok: false, err }))
       );
 
       for (let i = 0; i < settledPromises.length; i++) {
         const item = settledPromises[i];
         const expectedSq = scheduledQuizzes[i];
-        if (item && item.status === "fulfilled") {
+        if (item && item.status === 'fulfilled') {
           const payload = item.value;
           // Payload is { scheduledQuizId, ok: true, res }
           // In case of error: { scheduledQuizId, ok: false, err }
           if (
             payload &&
             payload.ok &&
-            "res" in payload &&
+            'res' in payload &&
             payload.res &&
             payload.res.scheduledQuizId
           ) {
             statuses[payload.res.scheduledQuizId] = payload.res;
           } else if (
             payload &&
-            "res" in payload &&
+            'res' in payload &&
             payload.res &&
             payload.res.isOld
           ) {
@@ -392,13 +392,13 @@ async function checkScheduledQuizzesUserStatus(
           } else {
             // Unexpected payload shape
             logger.error(
-              `Unexpected scheduled quiz status payload for scheduled quiz ${expectedSq?._id} with payload: ${JSON.stringify(payload)}`,
+              `Unexpected scheduled quiz status payload for scheduled quiz ${expectedSq?._id} with payload: ${JSON.stringify(payload)}`
             );
           }
         } else {
           // promise rejected: log with scheduledQuiz id and continue
           logger.error(
-            `Failed to check scheduled quiz status for scheduled quiz ${expectedSq?._id}: ${item}`,
+            `Failed to check scheduled quiz status for scheduled quiz ${expectedSq?._id}: ${item}`
           );
         }
       }
@@ -406,7 +406,7 @@ async function checkScheduledQuizzesUserStatus(
       courseStatuses[course._id.toString()] = statuses;
     } catch (err: unknown) {
       logger.error(
-        `Error checking scheduled quizzes for course ${course._id}: ${err}`,
+        `Error checking scheduled quizzes for course ${course._id}: ${err}`
       );
       courseStatuses[course._id.toString()] = {};
     }
@@ -419,11 +419,11 @@ const functions = {
   // Check status of all scheduled quizzes from the user's registered courses
   checkScheduledQuizzes: async function (
     req: Express.AuthenticatedRequest,
-    res: Response,
+    res: Response
   ) {
     try {
       const registeredCourses = await ModelHelper.getUserRegisteredCourses(
-        req.token._id,
+        req.token._id
       );
       if (!registeredCourses) {
         return res
@@ -436,7 +436,7 @@ const functions = {
 
       const statuses = await checkScheduledQuizzesUserStatus(
         registeredCourses,
-        req.token._id,
+        req.token._id
       );
       if (!statuses) {
         return res.status(CheckScheduledQuizzesStatus.InternalError).send({
@@ -446,7 +446,7 @@ const functions = {
 
       // Return the statuses object directly (not stringified) for easier consumption by clients
       return res.status(CheckScheduledQuizzesStatus.Retrieved).send({
-        message: "Retrieved scheduled quiz statuses.",
+        message: 'Retrieved scheduled quiz statuses.',
         statuses: JSON.stringify(statuses),
       });
     } catch (err: unknown) {
@@ -458,7 +458,7 @@ const functions = {
   },
   checkTrialQuizPlayStatus: async function (
     req: Express.AuthenticatedRequest<{ courseId: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.params.courseId) {
       return res.status(TrialQuizPlayStatusCode.MissingArguments).send({
@@ -478,28 +478,28 @@ const functions = {
 
     try {
       // We just select (retain) the trialQuiz field which we need.
-      const course = await CourseModel.findById(courseId, "trialQuiz")
+      const course = await CourseModel.findById(courseId, 'trialQuiz')
         .lean()
         .exec();
       if (!course) {
         logger.error(
-          `Failed to find course to check its trial quiz play status: ${rawCourseId}`,
+          `Failed to find course to check its trial quiz play status: ${rawCourseId}`
         );
         return res.status(TrialQuizPlayStatusCode.InternalError).send({
-          message: "Failed to check trial quiz play status. (ERR12)",
+          message: 'Failed to check trial quiz play status. (ERR12)',
         });
       }
 
       if (!course.trialQuiz) {
         return res.status(TrialQuizPlayStatusCode.NoTrialQuiz).send({
-          message: "There is no trial quiz for this course.",
+          message: 'There is no trial quiz for this course.',
         });
       }
 
       // Only fetch the fields contextId and activities to compute unique activity ids
       const playContexts = await PlayContextModel.find(
-        { user: req.token._id, course: courseId, playType: "trialQuiz" },
-        "contextId activities",
+        { user: req.token._id, course: courseId, playType: 'trialQuiz' },
+        'contextId activities'
       )
         .lean()
         .exec();
@@ -507,7 +507,7 @@ const functions = {
       if (!playContexts || playContexts.length === 0) {
         return res.status(TrialQuizPlayStatusCode.NotPlayed).send({
           message:
-            "The user has not yet played the trial quiz for this course.",
+            'The user has not yet played the trial quiz for this course.',
         });
       }
 
@@ -527,53 +527,53 @@ const functions = {
         // Nothing to play (this case should normally never occur)
         return res.status(TrialQuizPlayStatusCode.NotPlayed).send({
           message:
-            "The user has not yet played the trial quiz for this course.",
+            'The user has not yet played the trial quiz for this course.',
         });
       }
 
       // Get the distinct activities the user has answered during those play contexts.
       const answeredActivityIds = await ActivityUserAnswerModel.distinct(
-        "activity",
+        'activity',
         {
           user: req.token._id,
           playContextId: { $in: contextIds },
-        },
+        }
       );
 
       const answeredSet = new Set(
-        (answeredActivityIds || []).map((x) => x.toString()),
+        (answeredActivityIds || []).map((x) => x.toString())
       );
       if (answeredSet.size >= uniqueActivityIds.length) {
         return res.status(TrialQuizPlayStatusCode.Played).send({
-          message: "The user has played the trial quiz for this course.",
+          message: 'The user has played the trial quiz for this course.',
         });
       }
 
       // Return remaining activity ids which have not been answered yet
       const remainingActivityIds = uniqueActivityIds.filter(
-        (id) => !answeredSet.has(id),
+        (id) => !answeredSet.has(id)
       );
       return res.status(TrialQuizPlayStatusCode.NotPlayed).send({
         message:
-          "The user has not yet fully played the trial quiz for this course.",
+          'The user has not yet fully played the trial quiz for this course.',
         remainingActivities: remainingActivityIds,
       });
     } catch (err: unknown) {
       logger.error(
-        `Error while checking trial quiz play status for course ${rawCourseId}: ${err}`,
+        `Error while checking trial quiz play status for course ${rawCourseId}: ${err}`
       );
       return res.status(TrialQuizPlayStatusCode.InternalError).send({
-        message: "Failed to check trial quiz play status. (ERR2)",
+        message: 'Failed to check trial quiz play status. (ERR2)',
       });
     }
   },
   playScheduledQuiz: async function (
     req: Express.AuthenticatedRequest<
-      {},
-      {},
+      Record<string, never>,
+      Record<string, never>,
       { scheduledQuizId: string; timestamp: string }
     >,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.scheduledQuizId || !req.body.timestamp) {
       logger.warn("Can't play scheduled quiz: missing arguments.");
@@ -585,7 +585,7 @@ const functions = {
     const rawScheduledQuizId = req.body.scheduledQuizId;
     if (!mongoose.isValidObjectId(rawScheduledQuizId)) {
       logger.error(
-        `Invalid scheduledQuizId for playScheduledQuiz: ${rawScheduledQuizId}`,
+        `Invalid scheduledQuizId for playScheduledQuiz: ${rawScheduledQuizId}`
       );
       return res.status(PlayScheduledQuizStatus.MissingArguments).send({
         message:
@@ -597,12 +597,12 @@ const functions = {
       const status = await checkScheduledQuizUserStatus(
         rawScheduledQuizId,
         req.token._id,
-        false,
+        false
       );
 
       if (!status || status.err) {
         logger.error(
-          `Failed to check scheduled quiz status before play for scheduledQuizId ${rawScheduledQuizId}: ${status?.err}`,
+          `Failed to check scheduled quiz status before play for scheduledQuizId ${rawScheduledQuizId}: ${status?.err}`
         );
         return res.status(PlayScheduledQuizStatus.InternalError).send({
           message: "Can't play scheduled quiz: internal error occurred.",
@@ -611,30 +611,26 @@ const functions = {
 
       switch (status.quizStatus) {
         case ScheduledQuizStatus.CanStart: {
-          // we use a session/transaction to atomically ensure only a single ScheduledQuizUserStart is created
           const session = await mongoose.startSession();
           try {
             await session.withTransaction(async () => {
-              // we re-check inside the transaction whether a ScheduledQuizUserStart already exists
               const existingScheduledQuizUserStart =
                 await ScheduledQuizUserStartModel.findOne(
                   { scheduledQuiz: rawScheduledQuizId, user: req.token._id },
                   null,
-                  { session },
+                  { session }
                 ).exec();
 
               if (existingScheduledQuizUserStart) {
                 return;
               }
 
-              // Create and save the start in-transaction so any schema middleware runs
               const scheduledQuizUserStart = new ScheduledQuizUserStartModel({
                 scheduledQuiz: rawScheduledQuizId,
                 timestamp: req.body.timestamp,
                 user: req.token._id,
               });
 
-              // pass session to save()
               await scheduledQuizUserStart.save({
                 session,
               });
@@ -647,7 +643,7 @@ const functions = {
             });
           } catch (err: unknown) {
             logger.error(
-              `Transaction failed while creating ScheduledQuizUserStart for scheduledQuizId ${rawScheduledQuizId}: ${err}`,
+              `Transaction failed while creating ScheduledQuizUserStart for scheduledQuizId ${rawScheduledQuizId}: ${err}`
             );
             return res.status(PlayScheduledQuizStatus.InternalError).send({
               message: "Can't play scheduled quiz: internal error occurred.",
@@ -697,7 +693,7 @@ const functions = {
       }
     } catch (err: unknown) {
       logger.error(
-        `Unhandled error in playScheduledQuiz for scheduledQuizId ${rawScheduledQuizId}: ${err}`,
+        `Unhandled error in playScheduledQuiz for scheduledQuizId ${rawScheduledQuizId}: ${err}`
       );
       return res.status(PlayScheduledQuizStatus.InternalError).send({
         message: "Can't play scheduled quiz: internal error occurred.",
@@ -706,7 +702,7 @@ const functions = {
   },
   checkScheduledQuizSurveyStatus: async function (
     req: Express.AuthenticatedRequest<{ scheduledQuizId: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.params.scheduledQuizId) {
       logger.warn("Can't check survey status: missing arguments.");
@@ -722,7 +718,7 @@ const functions = {
     }
     try {
       const scheduledQuiz = await ModelHelper.findScheduledQuiz(
-        req.params.scheduledQuizId,
+        req.params.scheduledQuizId
       );
       if (!scheduledQuiz) {
         return res
@@ -735,7 +731,7 @@ const functions = {
       const surveyStatus =
         await SurveyHelper.checkScheduledQuizSurveyUserStatus(
           req.token._id,
-          scheduledQuiz,
+          scheduledQuiz
         );
       if (!surveyStatus) {
         return res.status(CheckScheduledQuizSurveyStatus.InternalError).send({
@@ -745,17 +741,17 @@ const functions = {
       if (surveyStatus.existingSurveyAnswer) {
         return res.status(CheckScheduledQuizSurveyStatus.AlreadyTaken).send({
           message:
-            "The user has already taken the survey for this scheduled quiz.",
+            'The user has already taken the survey for this scheduled quiz.',
         });
       } else if (surveyStatus.questions) {
         return res.status(CheckScheduledQuizSurveyStatus.Available).send({
-          message: "The user can take a survey for this scheduled quiz.",
+          message: 'The user can take a survey for this scheduled quiz.',
           availableSurveyQuestions: surveyStatus.questions,
         });
       } else {
         return res.status(CheckScheduledQuizSurveyStatus.PlayPeriodOver).send({
           message:
-            "The user can no longer take a survey for this scheduled quiz.",
+            'The user can no longer take a survey for this scheduled quiz.',
         });
       }
     } catch (err: unknown) {

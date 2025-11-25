@@ -8,39 +8,59 @@ const allSchemas: Record<string, any> = {};
 
 // read each schema file
 if (fs.existsSync(schemasDir)) {
-    fs.readdirSync(schemasDir)
-        .filter(file => file.endsWith('.json'))
-        .forEach(file => {
-            const schemaPath = path.join(schemasDir, file);
-            const schemaContent = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+  fs.readdirSync(schemasDir)
+    .filter((file) => file.endsWith('.json'))
+    .forEach((file) => {
+      const schemaPath = path.join(schemasDir, file);
+      const schemaContent = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 
-            // merge schema definitions contained within this file into the full list allSchemas
-            if (schemaContent.definitions) {
-                Object.assign(allSchemas, schemaContent.definitions);
-            }
-        });
+      // merge schema definitions contained within this file into the full list allSchemas
+      if (schemaContent.definitions) {
+        Object.assign(allSchemas, schemaContent.definitions);
+      }
+    });
 }
 
 const options = {
-    definition: {
-        openapi: '3.0.0',
-        info: {
-            title: 'BEACON Q - Backend API',
-            version: '1.0.0',
-            description: 'Backend API for BEACON Q learning platform',
-        },
-        components: {
-            securitySchemes: {
-                bearerAuth: {
-                    type: 'http',
-                    scheme: 'bearer',
-                    bearerFormat: 'JWT',
-                },
-            },
-            schemas: allSchemas,
-        },
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'BEACON Q - Backend API',
+      version: '1.0.0',
+      description: 'Backend API for BEACON Q learning platform',
     },
-    apis: ['./routes/*.ts'],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+      schemas: allSchemas,
+    },
+  },
+  tags: [
+    {
+      name: 'Teacher Only',
+      description:
+        'Endpoint reserved for users with the role TEACHER (contained within the bearer token)',
+    },
+    { name: 'Course Announcements' },
+    { name: 'Courses' },
+    { name: 'Activities' },
+    { name: 'Quizzes' },
+    { name: 'Topics' },
+    { name: 'Course Sessions' },
+    { name: 'Users' },
+    { name: 'Teachers' },
+    { name: 'Stats' },
+    { name: 'Sync' },
+    { name: 'Admin' },
+    { name: 'Achievements' },
+    { name: 'Patrons' },
+  ],
+  apis: ['./routes/*.ts'],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
