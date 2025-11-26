@@ -10,7 +10,7 @@ Backend for the quiz platform "BEACON Q" ([Play Store](https://play.google.com/s
 - ✅ TypeScript
 - ✅ Rotating logs
 - ✅ MongoDB transactions (requires replica set)
-- ✅ Interactive API documentation (Swagger)
+- 🆗 Interactive API documentation (Swagger) - PARTIAL (in progress)
   - Script for automatic schema generation (see `scripts/generateSchemas.js`)
 - ✅ Docker
   - MongoDB replica set (3 nodes)
