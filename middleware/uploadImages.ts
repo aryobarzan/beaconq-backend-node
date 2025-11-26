@@ -86,11 +86,13 @@ async function _storeBufferToGridFS(
   const filename = getUniqueFileName(file.originalname);
 
   // Ensure uploadDate is present in metadata for easier querying/indexing
-  const meta = Object.assign({}, metadata, { uploadDate: new Date() });
+  const meta = Object.assign({}, metadata, {
+    uploadDate: new Date(),
+    contentType: file.mimetype,
+  });
 
   const uploadStream = bucket.openUploadStream(filename, {
     metadata: meta,
-    contentType: file.mimetype,
   });
 
   // we use Readable.from to convert our file buffer into a readable stream

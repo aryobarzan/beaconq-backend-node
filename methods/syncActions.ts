@@ -1,4 +1,4 @@
-import mongoose, { FlattenMaps } from 'mongoose';
+import mongoose from 'mongoose';
 import { DateTime } from 'luxon';
 import logger from '../middleware/logger';
 import { FSRSDocument, FSRSModel } from '../models/fsrsModel';
@@ -82,7 +82,7 @@ const functions = {
       const dbFSRSModels = await FSRSModel.find(conditions).lean();
 
       const fsrsModelsToUpdateOnServer: FSRSDocument[] = [];
-      const fsrsModelsToSendToClient: FlattenMaps<FSRSDocument>[] = [];
+      const fsrsModelsToSendToClient: FSRSDocument[] = [];
       const clientModelsMap = new Map(
         fsrsModels.map((m) => [`${m.dataId}_${m.dataType}`, m])
       );
@@ -211,13 +211,17 @@ const functions = {
     const activityUserAnswerTimestamps = Array.isArray(
       activityUserAnswerTimestampsRaw
     )
-      ? activityUserAnswerTimestampsRaw.map((elem) => DateTime.fromISO(elem))
+      ? activityUserAnswerTimestampsRaw.map((elem) =>
+          DateTime.fromISO(elem).toJSDate()
+        )
       : [];
     try {
       let result = await ActivityUserAnswerModel.find(
         {
           user: userId,
-          timestamp: { $in: activityUserAnswerTimestamps },
+          timestamp: {
+            $in: activityUserAnswerTimestamps,
+          },
         },
         'timestamp -_id'
       )
@@ -229,7 +233,7 @@ const functions = {
           result.map((elem) => DateTime.fromJSDate(elem.timestamp).toISO())
         );
         const nonLoggedAnswerTimestamps = activityUserAnswerTimestamps
-          .map((dt) => dt.toISO())
+          .map((dt) => DateTime.fromJSDate(dt).toISO())
           .filter((x) => !foundTimestampsSet.has(x));
 
         if (nonLoggedAnswerTimestamps.length > 0) {

@@ -39,6 +39,8 @@ However, you are also free to directly run the node app on your local machine (`
 
 This project relies on a number of environment variables and external credentials (Firebase service account JSON). For security reasons, never commit real credentials to the repository — use the provided `.env.example` as a template and keep your real `.env` and service account files outside source control.
 
+**Note**: Node 18+ is required due to the mongoose package (>=9.0.0).
+
 ### Environment file (`.env`)
 
 Use the provided `.env.example` to identify the expected key-values.

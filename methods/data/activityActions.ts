@@ -89,7 +89,7 @@ const functions = {
           await new PermissionModel({
             user: req.token._id,
             resourceType: 'ACTIVITY',
-            resource: savedActivity.id,
+            resource: savedActivity._id,
             level: PermissionLevel.EXECUTE,
           }).save({ session });
           await archiveActivity(savedActivity, session);

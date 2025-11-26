@@ -100,11 +100,10 @@ const courseSchema = new Schema(
 // To optimize ModelHelper.findCourseAndSession
 courseSchema.index({ 'sessions.scheduledQuizzes._id': 1 }, { unique: false });
 
-courseSchema.pre('save', function (this: CourseDocument, next) {
+courseSchema.pre('save', function (this: CourseDocument) {
   if (!this.accessKey) {
     this.accessKey = crypto.randomBytes(4).toString('hex').toUpperCase();
   }
-  next();
 });
 
 courseSchema.method(

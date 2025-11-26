@@ -48,7 +48,10 @@ const functions = {
     try {
       const existingFSRSModels = await FSRSModel.find({
         user: userId,
-        dataId: { $in: dataIdsToSearch },
+        // cast ObjectIds to strings as $in expects string[].
+        // mongoose will cast the strings to ObjectIds at runtime.
+        // change brought by mongoose v9
+        dataId: { $in: dataIdsToSearch.map((id) => id.toString()) },
       }).exec();
       let operations: any[] = [];
       for (let fsrsModel of fsrsModels) {
