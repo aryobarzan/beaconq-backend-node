@@ -5,13 +5,15 @@
 
 Backend for the quiz platform "BEACON Q" ([Play Store](https://play.google.com/store/apps/details?id=lu.uni.coast.beacon_q_app), [App Store](https://apps.apple.com/us/app/beacon-q/id1643852992)), based on Node.js and MongoDB.
 
+As of 26 November 2025: ⭐ **fully migrated to TypeScript** ⭐
+
 **Overview**:
 
 - ✅ TypeScript
 - ✅ Rotating logs
 - ✅ MongoDB transactions (requires replica set)
 - 🆗 Interactive API documentation (Swagger) - PARTIAL (in progress)
-  - Script for automatic schema generation (see `scripts/generateSchemas.js`)
+- ✅ Script for automatic schema generation (see `scripts/generateSchemas.js`)
 - ✅ Docker
   - MongoDB replica set (3 nodes)
   - Automatic MongoDB initialization (keyfile, replica set initialization, user creation; see `docker-compose.yml` and `mongo-init.js.example`)
