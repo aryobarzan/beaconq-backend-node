@@ -41,7 +41,9 @@ COPY --from=builder /app/schemas ./dist/schemas
 
 # Copy necessary runtime files
 COPY mongo-init.js ./
+# requires for firebase admin initialization
 COPY beaconQ_config ./beaconQ_config
+# required as swagger.ts references it
 COPY routes ./dist/routes
 
 # Create log directory and set ownership
