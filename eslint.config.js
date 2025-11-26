@@ -76,6 +76,7 @@ module.exports = [
       '*.config.js',
       'scripts/**',
       'mongo-init.js',
+      '.env',
     ],
   },
 ];
