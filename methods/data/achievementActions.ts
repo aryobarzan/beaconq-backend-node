@@ -1,15 +1,15 @@
-import { Response } from "express";
-import ModelHelper from "../../middleware/modelHelper";
-import logger from "../../middleware/logger";
-import mongoose from "mongoose";
+import { Response } from 'express';
+import ModelHelper from '../../middleware/modelHelper';
+import logger from '../../middleware/logger';
+import mongoose from 'mongoose';
 import {
   AchievementDocument,
   AchievementModel,
-} from "../../models/achievement";
+} from '../../models/achievement';
 import {
   UserAchievementDocument,
   UserAchievementModel,
-} from "../../models/userAchievement";
+} from '../../models/userAchievement';
 
 // Possible status codes
 enum CreateAchievementsStatus {
@@ -42,18 +42,18 @@ enum UpdateUserAchievementsStatus {
 const functions = {
   createAchievements: async function (
     req: Express.AuthenticatedRequest,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res
         .status(CreateAchievementsStatus.Unauthorized)
-        .send({ message: "You are not authorized to perform this action." });
+        .send({ message: 'You are not authorized to perform this action.' });
     }
 
     if (!req.body.achievements) {
       return res
         .status(CreateAchievementsStatus.MissingArguments)
-        .send({ message: "Please indicate the achievements to create." });
+        .send({ message: 'Please indicate the achievements to create.' });
     }
 
     let achievementsRaw: any;
@@ -63,13 +63,13 @@ const functions = {
       logger.error(`createAchievements: invalid JSON: ${err}`);
       return res
         .status(CreateAchievementsStatus.MissingArguments)
-        .send({ message: "Invalid achievements JSON." });
+        .send({ message: 'Invalid achievements JSON.' });
     }
 
     if (!Array.isArray(achievementsRaw) || achievementsRaw.length === 0) {
       return res
         .status(CreateAchievementsStatus.None)
-        .send({ message: "No achievements to create." });
+        .send({ message: 'No achievements to create.' });
     }
 
     // safety limit to avoid overloading database
@@ -95,7 +95,7 @@ const functions = {
 
     if (operations.length === 0) {
       return res.status(CreateAchievementsStatus.None).send({
-        message: "No achievements to create (possible decode failures).",
+        message: 'No achievements to create (possible decode failures).',
         decodeFailures,
       });
     }
@@ -118,7 +118,7 @@ const functions = {
         })) || [];
 
       return res.status(CreateAchievementsStatus.Created).send({
-        message: "Created achievements.",
+        message: 'Created achievements.',
         createdCount: result.insertedCount || createdIds.length,
         createdIds,
         writeErrorCount: result.getWriteErrorCount() || writeErrors.length,
@@ -145,7 +145,7 @@ const functions = {
           })) || [];
 
         return res.status(CreateAchievementsStatus.Created).send({
-          message: "Created achievements (partial success).",
+          message: 'Created achievements (partial success).',
           createdCount: createdIds.length,
           createdIds,
           writeErrorCount: writeErrors.length,
@@ -156,7 +156,7 @@ const functions = {
 
       return res
         .status(CreateAchievementsStatus.InternalError)
-        .send({ message: "Failed to create achievements. (ERR301)" });
+        .send({ message: 'Failed to create achievements. (ERR301)' });
     }
   },
   getAchievements: async function (
@@ -165,7 +165,7 @@ const functions = {
       {},
       { courseIds: string; excludeGlobal: boolean }
     >,
-    res: Response,
+    res: Response
   ) {
     let courseIds: mongoose.Types.ObjectId[] = [];
     if (req.body.courseIds) {
@@ -175,13 +175,13 @@ const functions = {
         if (!Array.isArray(courseIdsRaw)) {
           return res.status(GetAchievementsStatus.MissingArguments).send({
             message:
-              "Achievement retrieval failed: courseIds must be an array. (ERR200)",
+              'Achievement retrieval failed: courseIds must be an array. (ERR200)',
           });
         }
-      } catch (err: unknown) {
+      } catch (_: unknown) {
         return res
           .status(GetAchievementsStatus.MissingArguments)
-          .send({ message: "Achievement retrieval failed. (ERR201)" });
+          .send({ message: 'Achievement retrieval failed. (ERR201)' });
       }
       // retain only valid course IDs
       courseIds = courseIdsRaw
@@ -190,7 +190,7 @@ const functions = {
     }
     let excludeGlobal =
       req.body.excludeGlobal === true ||
-      String(req.body.excludeGlobal) === "true";
+      String(req.body.excludeGlobal) === 'true';
     let condition =
       !courseIds || courseIds.length === 0
         ? { course: null }
@@ -204,17 +204,17 @@ const functions = {
       if (!achievements || achievements.length === 0) {
         return res
           .status(GetAchievementsStatus.NoAchievements)
-          .send({ message: "No achievements available.", achievements: [] });
+          .send({ message: 'No achievements available.', achievements: [] });
       }
       return res.status(GetAchievementsStatus.Retrieved).send({
-        message: "Achievements retrieved.",
+        message: 'Achievements retrieved.',
         achievements: achievements,
       });
     } catch (err: unknown) {
       logger.error(err);
       return res
         .status(GetAchievementsStatus.InternalError)
-        .send({ message: "Achievement retrieval failed. (ERR204)" });
+        .send({ message: 'Achievement retrieval failed. (ERR204)' });
     }
   },
   getUserAchievements: async function (
@@ -223,7 +223,7 @@ const functions = {
       {},
       { userId: string; achievementIds: string }
     >,
-    res: Response,
+    res: Response
   ) {
     // By default, the requester wants to fetch their own achievements
     let userId = new mongoose.Types.ObjectId(req.token._id);
@@ -233,11 +233,11 @@ const functions = {
         userId = new mongoose.Types.ObjectId(req.body.userId);
       } catch (err: unknown) {
         logger.error(
-          `Failed to parse custom user id for getUserAchievements: ${err}`,
+          `Failed to parse custom user id for getUserAchievements: ${err}`
         );
         return res
           .status(GetUserAchievementsStatus.MissingArguments)
-          .send({ message: "User achievement retrieval failed. (ERR200)" });
+          .send({ message: 'User achievement retrieval failed. (ERR200)' });
       }
     }
     let achievementIds: mongoose.Types.ObjectId[] = [];
@@ -248,13 +248,13 @@ const functions = {
         if (!Array.isArray(achievementIdsRaw)) {
           return res.status(GetUserAchievementsStatus.MissingArguments).send({
             message:
-              "User achievement retrieval failed: achievementIds must be an array. (ERR201)",
+              'User achievement retrieval failed: achievementIds must be an array. (ERR201)',
           });
         }
-      } catch (err: unknown) {
+      } catch (_: unknown) {
         return res
           .status(GetUserAchievementsStatus.MissingArguments)
-          .send({ message: "User achievement retrieval failed. (ERR202)" });
+          .send({ message: 'User achievement retrieval failed. (ERR202)' });
       }
       // retain only valid achievement IDs
       achievementIds = achievementIdsRaw
@@ -282,43 +282,43 @@ const functions = {
         .exec();
       if (!userAchievements || userAchievements.length === 0) {
         return res.status(GetUserAchievementsStatus.NoUserAchievements).send({
-          message: "No user achievements available.",
+          message: 'No user achievements available.',
           achievements: [],
         });
       }
       return res.status(GetUserAchievementsStatus.Retrieved).send({
-        message: "User achievements retrieved.",
+        message: 'User achievements retrieved.',
         achievements: userAchievements,
       });
     } catch (err: unknown) {
       logger.error(err);
       return res
         .status(GetUserAchievementsStatus.InternalError)
-        .send({ message: "User achievement retrieval failed. (ERR205)" });
+        .send({ message: 'User achievement retrieval failed. (ERR205)' });
     }
   },
   updateUserAchievements: async function (
     req: Express.AuthenticatedRequest<{}, {}, { userAchievements: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.userAchievements) {
       return res.status(UpdateUserAchievementsStatus.MissingArguments).send({
-        message: "No user achievements indicated.",
+        message: 'No user achievements indicated.',
       });
     }
     let receivedUserAchievementsRaw = [];
     try {
       receivedUserAchievementsRaw = JSON.parse(req.body.userAchievements);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(UpdateUserAchievementsStatus.MissingArguments).send({
-        message: "No user achievements indicated. (invalid json)",
+        message: 'No user achievements indicated. (invalid json)',
       });
     }
 
     let receivedUserAchievements: UserAchievementDocument[] = [];
     for (let receivedUserAchievementRaw of receivedUserAchievementsRaw) {
       const userAchievement = ModelHelper.decodeUserAchievement(
-        receivedUserAchievementRaw,
+        receivedUserAchievementRaw
       );
       if (userAchievement) {
         userAchievement.user = new mongoose.Types.ObjectId(req.token._id);
@@ -346,7 +346,7 @@ const functions = {
 
     if (receivedUserAchievements.length === 0) {
       return res.status(UpdateUserAchievementsStatus.MissingArguments).send({
-        message: "No user achievements indicated. (invalid achievements)",
+        message: 'No user achievements indicated. (invalid achievements)',
       });
     }
 
@@ -381,7 +381,7 @@ const functions = {
     if (operations.length === 0) {
       return res
         .status(UpdateUserAchievementsStatus.None)
-        .send({ message: "No user achievements to update." });
+        .send({ message: 'No user achievements to update.' });
     }
     try {
       // "ordered: false" to avoid a single write failure aborting the entire bulkWrite operation
@@ -397,12 +397,12 @@ const functions = {
         .filter((id) => !insertedIds.includes(id));
 
       const allIds = [...insertedIds, ...modifiedIds].map(
-        (id) => new mongoose.Types.ObjectId(id),
+        (id) => new mongoose.Types.ObjectId(id)
       );
 
       if (allIds.length === 0) {
         return res.status(UpdateUserAchievementsStatus.Updated).send({
-          message: "User achievements updated (None).",
+          message: 'User achievements updated (None).',
           upsertedCount: result.upsertedCount,
           modifiedCount: result.modifiedCount,
           writeErrorCount: result.getWriteErrorCount(),
@@ -415,7 +415,7 @@ const functions = {
           .lean()
           .exec();
         return res.status(UpdateUserAchievementsStatus.Updated).send({
-          message: "User achievements updated.",
+          message: 'User achievements updated.',
           upsertedCount: result.upsertedCount,
           modifiedCount: result.modifiedCount,
           writeErrorCount: result.getWriteErrorCount(),
@@ -424,7 +424,7 @@ const functions = {
       } catch (err: unknown) {
         logger.error(err);
         return res.status(UpdateUserAchievementsStatus.Updated).send({
-          message: "User achievements updated, but failed to retrieve them.",
+          message: 'User achievements updated, but failed to retrieve them.',
           upsertedCount: result.upsertedCount,
           modifiedCount: result.modifiedCount,
           writeErrorCount: result.getWriteErrorCount(),
@@ -434,7 +434,7 @@ const functions = {
       logger.error(err);
       return res
         .status(UpdateUserAchievementsStatus.InternalError)
-        .send({ message: "Failed to update user achievements. (ERR941)" });
+        .send({ message: 'Failed to update user achievements. (ERR941)' });
     }
   },
 };

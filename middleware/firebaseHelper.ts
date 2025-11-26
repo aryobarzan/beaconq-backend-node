@@ -1,14 +1,14 @@
-import firebaseAdmin from "firebase-admin";
-import { DateTime } from "luxon";
-import { CourseDocument, CourseModel } from "../models/course";
-import logger from "./logger";
-import nodeSchedule from "node-schedule";
-import mongoose from "mongoose";
+import firebaseAdmin from 'firebase-admin';
+import { DateTime } from 'luxon';
+import { CourseDocument, CourseModel } from '../models/course';
+import logger from './logger';
+import nodeSchedule from 'node-schedule';
+import mongoose from 'mongoose';
 
 async function shutdown() {
   try {
     await nodeSchedule.gracefulShutdown();
-  } catch (err: unknown) {
+  } catch (_: unknown) {
     // do nothing
   }
 }
@@ -16,7 +16,7 @@ async function shutdown() {
 async function setupNotifications() {
   try {
     await nodeSchedule.gracefulShutdown();
-    logger.info("[Setup] Cancelled all push notification jobs.");
+    logger.info('[Setup] Cancelled all push notification jobs.');
     const courses = await CourseModel.find().exec();
     if (courses) {
       for (let course of courses) {
@@ -25,13 +25,13 @@ async function setupNotifications() {
     }
   } catch (err: unknown) {
     logger.error(
-      "Failed to cancel all push notification jobs or to fetch courses: " + err,
+      'Failed to cancel all push notification jobs or to fetch courses: ' + err
     );
   }
 }
 
 async function refreshCourseNotifications(courseId: mongoose.Types.ObjectId) {
-  logger.info("Refresh push notifications for course " + courseId);
+  logger.info('Refresh push notifications for course ' + courseId);
   for (const [key, _] of Object.entries(nodeSchedule.scheduledJobs)) {
     if (key.includes(courseId.toString())) {
       nodeSchedule.cancelJob(key);
@@ -44,7 +44,7 @@ async function refreshCourseNotifications(courseId: mongoose.Types.ObjectId) {
     }
   } catch (err: unknown) {
     logger.error(
-      `Failed to refresh course notifications for course ${courseId}: ${err}`,
+      `Failed to refresh course notifications for course ${courseId}: ${err}`
     );
   }
 }
@@ -52,7 +52,7 @@ async function refreshCourseNotifications(courseId: mongoose.Types.ObjectId) {
 async function scheduleJobsForCourseScheduledQuizzes(course: CourseDocument) {
   if (!course || !Array.isArray(course.sessions)) return;
 
-  const currentDate = DateTime.now().setZone("utc");
+  const currentDate = DateTime.now().setZone('utc');
   for (const session of course.sessions) {
     if (!session || !Array.isArray(session.scheduledQuizzes)) continue;
     for (const scheduledQuizPlain of session.scheduledQuizzes) {
@@ -62,7 +62,7 @@ async function scheduleJobsForCourseScheduledQuizzes(course: CourseDocument) {
       if (!start) continue;
 
       const scheduledQuizStartDateTime = DateTime.fromJSDate(start, {
-        zone: "utc",
+        zone: 'utc',
       });
 
       if (scheduledQuizStartDateTime <= currentDate) continue;
@@ -78,13 +78,13 @@ async function scheduleJobsForCourseScheduledQuizzes(course: CourseDocument) {
 
       try {
         logger.info(
-          `[Course: ${course._id}] Scheduling push notification for scheduled quiz ${scheduledQuizId} at ${start.toUTCString()} of session ${session.title}`,
+          `[Course: ${course._id}] Scheduling push notification for scheduled quiz ${scheduledQuizId} at ${start.toUTCString()} of session ${session.title}`
         );
 
         nodeSchedule.scheduleJob(jobName, start, async function () {
           try {
             logger.info(
-              `Sending push notification for scheduled quiz ${scheduledQuizId} at ${start.toUTCString()}`,
+              `Sending push notification for scheduled quiz ${scheduledQuizId} at ${start.toUTCString()}`
             );
 
             // Limit max length to 100 characters
@@ -92,13 +92,13 @@ async function scheduleJobsForCourseScheduledQuizzes(course: CourseDocument) {
               session.title && session.title.length > 0
                 ? `A quiz is available to play for '${session.title}'!`.replace(
                     /(.{100})..+/,
-                    "$1…",
+                    '$1…'
                   )
-                : "A quiz is available to play!";
+                : 'A quiz is available to play!';
 
             const message = {
               data: {
-                type: "notification",
+                type: 'notification',
                 // IMPORTANT: without toString, the course'd id is Mongo's own ObjectId, which causes a FirebaseMessagingError,
                 // due to its data field only expecting String-type values!
                 course: course._id.toString(),
@@ -118,13 +118,13 @@ async function scheduleJobsForCourseScheduledQuizzes(course: CourseDocument) {
             }
           } catch (err: unknown) {
             logger.error(
-              `Unhandled error in scheduled push job ${jobName}: ${err}`,
+              `Unhandled error in scheduled push job ${jobName}: ${err}`
             );
           }
         });
       } catch (err: unknown) {
         logger.error(
-          `Failed to schedule push notification job ${jobName}: ${err}`,
+          `Failed to schedule push notification job ${jobName}: ${err}`
         );
       }
     }

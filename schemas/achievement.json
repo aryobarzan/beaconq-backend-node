@@ -15,7 +15,7 @@
           "type": "number"
         },
         "course": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "hideDescription": {
           "type": "boolean"
@@ -33,7 +33,7 @@
           "additionalProperties": false
         },
         "author": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "version": {
           "type": "number"

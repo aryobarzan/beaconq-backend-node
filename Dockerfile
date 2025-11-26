@@ -37,13 +37,18 @@ RUN npm ci --omit=dev --ignore-scripts && \
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/schemas ./dist/schemas
+# COPY --from=builder /app/dist/schemas ./dist/schemas
 
 # Copy necessary runtime files
 COPY mongo-init.js ./
+COPY beaconQ_config ./beaconQ_config
+COPY routes ./dist/routes
 
-# Create log directory
-RUN mkdir -p /app/log && \
-    chown -R node:node /app
+# Create log directory and set ownership
+# NOTE: do not apply chown to /app, as this will take much longer and is unnecessary.
+# NOTE 2: Logs are written to /app/dist/log (based on global.appRoot)
+RUN mkdir -p /app/dist/log && \
+    chown -R node:node /app/dist/log
 
 # Use non-root user
 USER node

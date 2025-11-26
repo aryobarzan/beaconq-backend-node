@@ -65,19 +65,19 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "playContextId": {
           "type": "string"
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "courseContext": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activity": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activityVersion": {
           "type": "number"
@@ -89,7 +89,7 @@
           "type": "number"
         },
         "computedDifficultyData": {
-          "$ref": "#/definitions/ActivityComputedDifficultyData"
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
         },
         "activityAnswerType": {
           "type": "string"
@@ -150,19 +150,19 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "playContextId": {
           "type": "string"
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "courseContext": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activity": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activityVersion": {
           "type": "number"
@@ -174,7 +174,7 @@
           "type": "number"
         },
         "computedDifficultyData": {
-          "$ref": "#/definitions/ActivityComputedDifficultyData"
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
         },
         "activityAnswerType": {
           "type": "string"
@@ -266,19 +266,19 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "playContextId": {
           "type": "string"
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "courseContext": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activity": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activityVersion": {
           "type": "number"
@@ -290,7 +290,7 @@
           "type": "number"
         },
         "computedDifficultyData": {
-          "$ref": "#/definitions/ActivityComputedDifficultyData"
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
         },
         "activityAnswerType": {
           "type": "string"
@@ -385,19 +385,19 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "playContextId": {
           "type": "string"
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "courseContext": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activity": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activityVersion": {
           "type": "number"
@@ -409,7 +409,7 @@
           "type": "number"
         },
         "computedDifficultyData": {
-          "$ref": "#/definitions/ActivityComputedDifficultyData"
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
         },
         "activityAnswerType": {
           "type": "string"

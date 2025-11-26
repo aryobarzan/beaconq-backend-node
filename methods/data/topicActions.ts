@@ -1,8 +1,8 @@
-import { TopicDocument, TopicModel } from "../../models/topic";
-import { PermissionModel, hasPermissions } from "../../models/permission";
-import mongoose from "mongoose";
-import logger from "../../middleware/logger";
-import { Response } from "express";
+import { TopicDocument, TopicModel } from '../../models/topic';
+import { PermissionModel, hasPermissions } from '../../models/permission';
+import mongoose from 'mongoose';
+import logger from '../../middleware/logger';
+import { Response } from 'express';
 // Possible status codes
 enum CreateOrUpdateTopicStatus {
   Created = 200,
@@ -18,8 +18,8 @@ enum GetTopicsStatus {
 
 class CreateOrUpdateTopicPermissionError extends Error {
   constructor() {
-    super("Lacking permission to update");
-    this.name = "CreateOrUpdateTopicPermissionError";
+    super('Lacking permission to update');
+    this.name = 'CreateOrUpdateTopicPermissionError';
     Object.setPrototypeOf(this, CreateOrUpdateTopicPermissionError.prototype);
   }
 }
@@ -27,25 +27,25 @@ class CreateOrUpdateTopicPermissionError extends Error {
 const functions = {
   createOrUpdateTopic: async function (
     req: Express.AuthenticatedRequest<{}, {}, { topic: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
-        message: "Topic creation failed: only teachers are authorized.",
+        message: 'Topic creation failed: only teachers are authorized.',
       });
     }
     if (!req.body.topic) {
       return res.status(CreateOrUpdateTopicStatus.MissingArguments).send({
-        message: "Topic creation failed: missing topic parameter.",
+        message: 'Topic creation failed: missing topic parameter.',
       });
     }
     let newTopic: TopicDocument;
     try {
       newTopic = new TopicModel(JSON.parse(req.body.topic));
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(CreateOrUpdateTopicStatus.InternalError).send({
         message:
-          "Topic creation failed: topic could not be parsed/deserialized.",
+          'Topic creation failed: topic could not be parsed/deserialized.',
       });
     }
 
@@ -73,7 +73,7 @@ const functions = {
           // grant creator full permissions for this topic (use savedTopic._id)
           await new PermissionModel({
             user: req.token._id,
-            resourceType: "TOPIC",
+            resourceType: 'TOPIC',
             resource: savedTopic._id,
             level: PermissionLevel.EXECUTE,
           }).save({ session });
@@ -85,7 +85,7 @@ const functions = {
           const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingTopic._id,
-            resourceType: "TOPIC",
+            resourceType: 'TOPIC',
           })
             .session(session)
             .lean()
@@ -93,7 +93,7 @@ const functions = {
           if (
             !permission ||
             !Number.isInteger(permission.level) ||
-            !hasPermissions(["write"], permission.level)
+            !hasPermissions(['write'], permission.level)
           ) {
             throw new CreateOrUpdateTopicPermissionError();
           }
@@ -102,28 +102,28 @@ const functions = {
           const updatedTopic = await TopicModel.findByIdAndUpdate(
             existingTopic._id,
             newTopic,
-            { new: true, session },
+            { new: true, session }
           ).exec();
           if (!updatedTopic) {
-            throw new Error("Failed to update topic");
+            throw new Error('Failed to update topic');
           }
 
-          logger.info("Updated topic: " + updatedTopic._id);
+          logger.info('Updated topic: ' + updatedTopic._id);
           result = updatedTopic;
         }
       });
       if (result) {
         const message =
           responseStatusCode == CreateOrUpdateTopicStatus.Created
-            ? "Topic created."
-            : "Topic updated.";
+            ? 'Topic created.'
+            : 'Topic updated.';
         return res.status(responseStatusCode).send({
           message: message,
           topic: result.toJSON(),
         });
       } else {
         return res.status(CreateOrUpdateTopicStatus.InternalError).send({
-          message: "Topic creation/update failed: internal error.",
+          message: 'Topic creation/update failed: internal error.',
         });
       }
     } catch (err: unknown) {
@@ -141,17 +141,17 @@ const functions = {
   getTopics: async function (req: Express.AuthenticatedRequest, res: Response) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
-        message: "Topic fetching failed: only teachers are authorized.",
+        message: 'Topic fetching failed: only teachers are authorized.',
       });
     }
     try {
       const topics = await TopicModel.aggregate([
         {
           $lookup: {
-            from: "permissions",
-            localField: "_id",
-            foreignField: "resource",
-            as: "permissions",
+            from: 'permissions',
+            localField: '_id',
+            foreignField: 'resource',
+            as: 'permissions',
           },
         },
         {
@@ -159,44 +159,44 @@ const functions = {
             permissions: {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
-                resourceType: "TOPIC",
+                resourceType: 'TOPIC',
                 user: new mongoose.Types.ObjectId(req.token._id),
                 level: { $gte: PermissionLevel.READ },
               },
             },
           },
         },
-        { $unset: ["permissions"] },
+        { $unset: ['permissions'] },
       ]).exec();
       if (!topics || topics.length === 0) {
         return res.status(GetTopicsStatus.None).send({
-          message: "Topic fetching failed: none found.",
+          message: 'Topic fetching failed: none found.',
         });
       }
       return res.status(GetTopicsStatus.Retrieved).send({ topics });
     } catch (err) {
       logger.error(err);
       return res.status(GetTopicsStatus.InternalError).send({
-        message: "Topic fetching failed: an error occurred.",
+        message: 'Topic fetching failed: an error occurred.',
       });
     }
   },
   // DEPRECATED: for compatibility with older client versions, we just return a generic response that indicates success.
   rateTopic: function (_: Express.AuthenticatedRequest, res: Response) {
     return res.status(200).send({
-      message: "Topic rating for course session stored.",
+      message: 'Topic rating for course session stored.',
     });
   },
   // DEPRECATED: for compatibility with older client versions, we just return an empty array.
   getTopicRatings: function (_: Express.AuthenticatedRequest, res: Response) {
     return res.status(200).send({
-      message: "Topic ratings retrieved.",
+      message: 'Topic ratings retrieved.',
       topicRatings: [],
     });
   },
   // DEPRECATED: for compatibility with older client versions, we just respond that there are no topic ratings.
   getTopicsRatings: function (_: Express.AuthenticatedRequest, res: Response) {
-    return res.status(209).send({ message: "No Topic ratings found." });
+    return res.status(209).send({ message: 'No Topic ratings found.' });
   },
 };
 

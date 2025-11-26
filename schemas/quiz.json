@@ -11,7 +11,7 @@
         "activities": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Types.ObjectId"
+            "type": "string"
           }
         },
         "version": {
@@ -33,7 +33,7 @@
           "type": "string"
         },
         "postFeedbackBeaconResource": {
-          "$ref": "#/definitions/BeaconResource"
+          "$ref": "#/components/schemas/BeaconResource"
         },
         "createdAt": {
           "type": "string",

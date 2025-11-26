@@ -6,7 +6,7 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "resourceType": {
           "type": "string",
@@ -19,7 +19,7 @@
           ]
         },
         "resource": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "level": {
           "type": "number"

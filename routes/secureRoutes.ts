@@ -480,7 +480,9 @@ router.get('/courses', courseActions.getCourses);
  *         required: false
  *         schema:
  *           type: boolean
- *         description: If true, only return metadata without full course details, e.g., scheduled quizzes do not include the quiz details (activities). (default: false)
+ *         description: >
+ *           If true, only return metadata without full course details, e.g.,
+ *           scheduled quizzes do not include the quiz details (activities). (default: false)
  *     responses:
  *       200:
  *         description: Courses retrieved successfully

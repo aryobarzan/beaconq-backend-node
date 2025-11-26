@@ -61,7 +61,7 @@
         "sections": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/BeaconResourceSection"
+            "$ref": "#/components/schemas/BeaconResourceSection"
           }
         },
         "tags": {

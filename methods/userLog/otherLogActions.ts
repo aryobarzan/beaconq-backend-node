@@ -1,20 +1,20 @@
-import mongoose from "mongoose";
-import ModelHelper from "../../middleware/modelHelper";
-import { SurveyAnswerDocument } from "../../models/logs/surveyAnswer";
-import logger from "../../middleware/logger";
+import mongoose from 'mongoose';
+import ModelHelper from '../../middleware/modelHelper';
+import { SurveyAnswerDocument } from '../../models/logs/surveyAnswer';
+import logger from '../../middleware/logger';
 import {
   AppInteractionLogDocument,
   AppInteractionLogModel,
-} from "../../models/logs/appInteractionLog";
+} from '../../models/logs/appInteractionLog';
 import {
   AppUserInteractionLogDocument,
   AppUserInteractionLogModel,
-} from "../../models/logs/appUserInteractionLog";
+} from '../../models/logs/appUserInteractionLog';
 import {
   PlayContextDocument,
   PlayContextModel,
-} from "../../models/logs/playContext";
-import { Response } from "express";
+} from '../../models/logs/playContext';
+import { Response } from 'express';
 
 // Possible status codes
 enum LogAppInteractionStatus {
@@ -48,26 +48,26 @@ const functions = {
   // This old endpoint is retained for compatibility with older client versions.
   logAppInteraction: async function (
     req: Express.AuthenticatedRequest<{}, {}, { appInteractionLog: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.appInteractionLog) {
       return res.status(LogAppInteractionStatus.MissingArguments).send({
-        message: "App interaction logging failed: missing parameter.",
+        message: 'App interaction logging failed: missing parameter.',
       });
     }
     let appInteractionLog: AppInteractionLogDocument;
     try {
       appInteractionLog = new AppInteractionLogModel(
-        JSON.parse(req.body.appInteractionLog),
+        JSON.parse(req.body.appInteractionLog)
       );
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(LogAppInteractionStatus.Invalid).send({
-        message: "App interaction logging failed: could not be deserialized.",
+        message: 'App interaction logging failed: could not be deserialized.',
       });
     }
     if (!appInteractionLog) {
       return res.status(LogAppInteractionStatus.Invalid).send({
-        message: "App interaction logging failed: could not be deserialized.",
+        message: 'App interaction logging failed: could not be deserialized.',
       });
     }
 
@@ -76,16 +76,16 @@ const functions = {
       let saved = await appInteractionLog.save();
       if (!saved) {
         return res.status(LogAppInteractionStatus.InternalError).send({
-          message: "App interaction logging failed: failed to save.",
+          message: 'App interaction logging failed: failed to save.',
         });
       }
       return res
         .status(LogAppInteractionStatus.Logged)
-        .send({ message: "App interaction logged." });
+        .send({ message: 'App interaction logged.' });
     } catch (err: unknown) {
       logger.error(`Failed to save appInteractionLog: ${err}`);
       return res.status(LogAppInteractionStatus.InternalError).send({
-        message: "App interaction logging failed: failed to save. (error)",
+        message: 'App interaction logging failed: failed to save. (error)',
       });
     }
   },
@@ -95,28 +95,28 @@ const functions = {
       {},
       { appUserInteractionLog: string }
     >,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.appUserInteractionLog) {
       return res.status(LogAppUserInteractionStatus.MissingArguments).send({
-        message: "App user interaction logging failed: missing parameter.",
+        message: 'App user interaction logging failed: missing parameter.',
       });
     }
     let appUserInteractionLog: AppUserInteractionLogDocument;
     try {
       appUserInteractionLog = new AppUserInteractionLogModel(
-        JSON.parse(req.body.appUserInteractionLog),
+        JSON.parse(req.body.appUserInteractionLog)
       );
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       return res.status(LogAppUserInteractionStatus.Invalid).send({
         message:
-          "App user interaction logging failed: could not be deserialized.",
+          'App user interaction logging failed: could not be deserialized.',
       });
     }
     if (!appUserInteractionLog) {
       return res.status(LogAppUserInteractionStatus.Invalid).send({
         message:
-          "App user interaction logging failed: could not be deserialized.",
+          'App user interaction logging failed: could not be deserialized.',
       });
     }
 
@@ -125,47 +125,47 @@ const functions = {
       let saved = await appUserInteractionLog.save();
       if (!saved) {
         return res.status(LogAppUserInteractionStatus.InternalError).send({
-          message: "App user interaction logging failed: failed to save.",
+          message: 'App user interaction logging failed: failed to save.',
         });
       }
       return res
         .status(LogAppUserInteractionStatus.Logged)
-        .send({ message: "App user interaction logged." });
+        .send({ message: 'App user interaction logged.' });
     } catch (err: unknown) {
       logger.error(`Failed to save appUserInteractionLog: ${err}`);
       return res.status(LogAppUserInteractionStatus.InternalError).send({
-        message: "App user interaction logging failed: failed to save. (error)",
+        message: 'App user interaction logging failed: failed to save. (error)',
       });
     }
   },
   logSurveyAnswer: async function (
     req: Express.AuthenticatedRequest<{}, {}, { surveyAnswer: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.surveyAnswer) {
       logger.warn(
-        "Survey answer logging failed: missing survey answer parameter.",
+        'Survey answer logging failed: missing survey answer parameter.'
       );
       return res.status(LogSurveyAnswerStatus.MissingArguments).send({
         message:
-          "Survey answer logging failed: missing survey answer parameter.",
+          'Survey answer logging failed: missing survey answer parameter.',
       });
     }
     let surveyAnswer: SurveyAnswerDocument | null;
     try {
       surveyAnswer = ModelHelper.decodeSurveyAnswer(
-        JSON.parse(req.body.surveyAnswer),
+        JSON.parse(req.body.surveyAnswer)
       );
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(LogSurveyAnswerStatus.InvalidSurveyAnswer).send({
         message:
-          "Survey answer logging failed: survey user answer could not be decoded.",
+          'Survey answer logging failed: survey user answer could not be decoded.',
       });
     }
     if (!surveyAnswer) {
       return res.status(LogSurveyAnswerStatus.InvalidSurveyAnswer).send({
         message:
-          "Survey answer logging failed: survey user answer could not be decoded.",
+          'Survey answer logging failed: survey user answer could not be decoded.',
       });
     }
 
@@ -174,16 +174,16 @@ const functions = {
       let saved = await surveyAnswer.save();
       if (!saved) {
         logger.warn(
-          "Survey answer logging failed: failed to save answer, there may be invalid fields such as the quiz id.",
+          'Survey answer logging failed: failed to save answer, there may be invalid fields such as the quiz id.'
         );
         return res.status(LogSurveyAnswerStatus.InternalError).send({
           message:
-            "Survey answer logging failed: failed to save answer, there may be invalid fields such as the quiz id.",
+            'Survey answer logging failed: failed to save answer, there may be invalid fields such as the quiz id.',
         });
       }
       return res
         .status(LogSurveyAnswerStatus.Logged)
-        .send({ message: "Survey answer logged." });
+        .send({ message: 'Survey answer logged.' });
     } catch (err: unknown) {
       if (
         err &&
@@ -192,39 +192,39 @@ const functions = {
       ) {
         return res.status(LogSurveyAnswerStatus.AlreadyLogged).send({
           message:
-            "Survey answer logging failed: this survey has already been answered by the user.",
+            'Survey answer logging failed: this survey has already been answered by the user.',
         });
       }
       logger.error(`Failed to save surveyAnswer: ${err}`);
       return res.status(LogSurveyAnswerStatus.InternalError).send({
-        message: "Survey answer logging failed: failed to store answer.",
+        message: 'Survey answer logging failed: failed to store answer.',
       });
     }
   },
   logPlayContext: async function (
     req: Express.AuthenticatedRequest<{}, {}, { playContext: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.playContext) {
       return res.status(LogPlayContext.MissingArguments).send({
-        message: "Play context logging failed: parameter missing.",
+        message: 'Play context logging failed: parameter missing.',
       });
     }
     let playContext: PlayContextDocument | null;
     try {
       playContext = ModelHelper.decodePlayContext(
-        JSON.parse(req.body.playContext),
+        JSON.parse(req.body.playContext)
       );
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(LogPlayContext.InternalError).send({
         message:
-          "Play context logging failed: play context could not be deserialized.",
+          'Play context logging failed: play context could not be deserialized.',
       });
     }
     if (!playContext) {
       return res.status(LogPlayContext.InternalError).send({
         message:
-          "Play context logging failed: play context could not be deserialized.",
+          'Play context logging failed: play context could not be deserialized.',
       });
     }
 
@@ -241,7 +241,7 @@ const functions = {
           upsert: true,
           runValidators: true,
           setDefaultsOnInsert: true,
-        },
+        }
       ).exec();
       if (
         !updateResult.acknowledged ||
@@ -249,23 +249,23 @@ const functions = {
       ) {
         return res.status(LogPlayContext.InternalError).send({
           message:
-            "Play context logging failed: play context could not be saved/updated.",
+            'Play context logging failed: play context could not be saved/updated.',
         });
       }
       if (updateResult.upsertedCount === 1) {
         return res.status(LogPlayContext.Logged).send({
-          message: "Play context logged.",
+          message: 'Play context logged.',
         });
       } else {
         return res.status(LogPlayContext.Updated).send({
-          message: "Play context updated.",
+          message: 'Play context updated.',
         });
       }
     } catch (err: unknown) {
       logger.error(`Failed to save playContext: ${err}`);
       return res.status(LogPlayContext.InternalError).send({
         message:
-          "Play context logging failed: play context could not be saved/updated. (error)",
+          'Play context logging failed: play context could not be saved/updated. (error)',
       });
     }
   },

@@ -37,7 +37,7 @@
         "secretQuestions": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/SecretQuestion"
+            "$ref": "#/components/schemas/SecretQuestion"
           }
         },
         "date": {

@@ -4,6 +4,7 @@ import path from 'path';
 
 // load schema (.json) files from schemas/
 const schemasDir = path.join(__dirname, 'schemas');
+const apisDir = path.join(__dirname, 'routes');
 const allSchemas: Record<string, any> = {};
 
 // read each schema file
@@ -21,7 +22,7 @@ if (fs.existsSync(schemasDir)) {
     });
 }
 
-const options = {
+const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
@@ -60,7 +61,7 @@ const options = {
     { name: 'Achievements' },
     { name: 'Patrons' },
   ],
-  apis: ['./routes/*.ts'],
+  apis: [path.join(apisDir, '*.ts')],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

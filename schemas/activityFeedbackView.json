@@ -6,10 +6,10 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activity": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activityVersion": {
           "type": "number"
@@ -21,7 +21,7 @@
           "type": "string"
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "timestamp": {
           "type": "string",
@@ -53,10 +53,10 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activity": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activityVersion": {
           "type": "number"
@@ -68,7 +68,7 @@
           "type": "string"
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "timestamp": {
           "type": "string",
@@ -112,10 +112,10 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activity": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "activityVersion": {
           "type": "number"
@@ -127,7 +127,7 @@
           "type": "string"
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "timestamp": {
           "type": "string",

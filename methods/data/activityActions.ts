@@ -1,14 +1,14 @@
-import { ActivityDocument, ActivityModel } from "../../models/activity";
-import { PermissionModel, hasPermissions } from "../../models/permission";
-import { ActivityArchiveModel } from "../../models/archive/activityArchive";
-import ModelHelper from "../../middleware/modelHelper";
-import mongoose from "mongoose";
-import logger from "../../middleware/logger";
-import { Response } from "express";
+import { ActivityDocument, ActivityModel } from '../../models/activity';
+import { PermissionModel, hasPermissions } from '../../models/permission';
+import { ActivityArchiveModel } from '../../models/archive/activityArchive';
+import ModelHelper from '../../middleware/modelHelper';
+import mongoose from 'mongoose';
+import logger from '../../middleware/logger';
+import { Response } from 'express';
 
 async function archiveActivity(
   activity: ActivityDocument,
-  session: mongoose.ClientSession,
+  session: mongoose.ClientSession
 ) {
   const activityArchive = new ActivityArchiveModel({ activity });
   return activityArchive.save({ session });
@@ -29,11 +29,11 @@ enum GetActivitiesStatus {
 
 class CreateOrUpdateActivityPermissionError extends Error {
   constructor() {
-    super("Lacking permission to update");
-    this.name = "CreateOrUpdateActivityPermissionError";
+    super('Lacking permission to update');
+    this.name = 'CreateOrUpdateActivityPermissionError';
     Object.setPrototypeOf(
       this,
-      CreateOrUpdateActivityPermissionError.prototype,
+      CreateOrUpdateActivityPermissionError.prototype
     );
   }
 }
@@ -41,20 +41,20 @@ class CreateOrUpdateActivityPermissionError extends Error {
 const functions = {
   createOrUpdateActivity: async function (
     req: Express.AuthenticatedRequest<{}, {}, { activity: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
-        message: "Activity creation failed: only teachers are authorized.",
+        message: 'Activity creation failed: only teachers are authorized.',
       });
     }
 
     let activityJSON: any;
     try {
       activityJSON = JSON.parse(req.body.activity);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(CreateOrUpdateActivityStatus.MissingArguments).send({
-        message: "Activity creation failed: activity could not be parsed.",
+        message: 'Activity creation failed: activity could not be parsed.',
       });
     }
 
@@ -62,7 +62,7 @@ const functions = {
     if (!newActivity) {
       return res.status(CreateOrUpdateActivityStatus.InternalError).send({
         message:
-          "Activity creation failed: activity could not be deserialized.",
+          'Activity creation failed: activity could not be deserialized.',
       });
     }
 
@@ -88,7 +88,7 @@ const functions = {
           const savedActivity = await newActivity.save({ session });
           await new PermissionModel({
             user: req.token._id,
-            resourceType: "ACTIVITY",
+            resourceType: 'ACTIVITY',
             resource: savedActivity.id,
             level: PermissionLevel.EXECUTE,
           }).save({ session });
@@ -96,7 +96,7 @@ const functions = {
           const populatedActivity =
             await ModelHelper.populateActivity(savedActivity);
           if (!populatedActivity) {
-            throw new Error("Failed to populate Topics for created activity");
+            throw new Error('Failed to populate Topics for created activity');
           }
           result = populatedActivity;
         }
@@ -106,7 +106,7 @@ const functions = {
           const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingActivity._id,
-            resourceType: "ACTIVITY",
+            resourceType: 'ACTIVITY',
           })
             .session(session)
             .lean()
@@ -114,7 +114,7 @@ const functions = {
           if (
             !permission ||
             !Number.isInteger(permission.level) ||
-            !hasPermissions(["write"], permission.level)
+            !hasPermissions(['write'], permission.level)
           ) {
             throw new CreateOrUpdateActivityPermissionError();
           }
@@ -127,16 +127,16 @@ const functions = {
           const updatedActivity = await ActivityModel.findByIdAndUpdate(
             existingActivity._id,
             newActivity,
-            { overwriteDiscriminatorKey: true, new: true, session },
+            { overwriteDiscriminatorKey: true, new: true, session }
           ).exec();
           if (!updatedActivity) {
-            throw new Error("Failed to update activity");
+            throw new Error('Failed to update activity');
           }
-          logger.info("Updated activity: " + updatedActivity._id);
+          logger.info('Updated activity: ' + updatedActivity._id);
           const populatedActivity =
             await ModelHelper.populateActivity(updatedActivity);
           if (!populatedActivity) {
-            throw new Error("Failed to populate Topics for updated activity");
+            throw new Error('Failed to populate Topics for updated activity');
           }
           result = populatedActivity;
           await archiveActivity(updatedActivity, session);
@@ -146,15 +146,15 @@ const functions = {
       if (result) {
         const message =
           responseStatusCode == CreateOrUpdateActivityStatus.Created
-            ? "Activity created."
-            : "Activity updated.";
+            ? 'Activity created.'
+            : 'Activity updated.';
         return res.status(responseStatusCode).send({
           message: message,
           activity: result.toJSON(),
         });
       } else {
         return res.status(CreateOrUpdateActivityStatus.InternalError).send({
-          message: "Activity creation/update failed: internal error.",
+          message: 'Activity creation/update failed: internal error.',
         });
       }
     } catch (err: unknown) {
@@ -171,21 +171,21 @@ const functions = {
   },
   getActivities: async function (
     req: Express.AuthenticatedRequest,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
-        message: "Activity fetching failed: only teachers are authorized.",
+        message: 'Activity fetching failed: only teachers are authorized.',
       });
     }
     try {
       const activities = await ActivityModel.aggregate([
         {
           $lookup: {
-            from: "permissions",
-            localField: "_id",
-            foreignField: "resource",
-            as: "permissions",
+            from: 'permissions',
+            localField: '_id',
+            foreignField: 'resource',
+            as: 'permissions',
           },
         },
         {
@@ -193,25 +193,25 @@ const functions = {
             permissions: {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
-                resourceType: "ACTIVITY",
+                resourceType: 'ACTIVITY',
                 user: new mongoose.Types.ObjectId(req.token._id),
                 level: { $gte: PermissionLevel.READ },
               },
             },
           },
         },
-        { $unset: ["permissions"] },
+        { $unset: ['permissions'] },
       ]).exec();
       if (!activities || activities.length === 0) {
         return res
           .status(GetActivitiesStatus.None)
-          .send({ message: "Activity fetching found no activities." });
+          .send({ message: 'Activity fetching found no activities.' });
       } else {
         const populatedActivities =
           await ModelHelper.populateActivities(activities);
         if (!populatedActivities) {
           return res.status(GetActivitiesStatus.InternalError).send({
-            message: "Activity fetching failed: failed to populate Topics.",
+            message: 'Activity fetching failed: failed to populate Topics.',
           });
         }
         return res.status(GetActivitiesStatus.Retrieved).send({

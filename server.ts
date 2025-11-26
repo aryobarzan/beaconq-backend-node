@@ -1,41 +1,42 @@
-/*global __dirname, a*/
-
 // server.js: server initialization, including database connection (MongoDB) and Firebase Admin
-import path from "path";
+import path from 'path';
 global.appRoot = path.resolve(__dirname);
 
-import process from "process";
-import express from "express";
-import cors from "cors";
-import connectDB from "./config/db";
-import passport from "passport";
-import routes from "./routes/routes";
-import secureRoutes from "./routes/secureRoutes";
-import auth from "./middleware/auth";
-import helmet from "helmet";
-import compression from "compression";
-import * as requestLogger from "./middleware/requestLogger";
-import logger from "./middleware/logger";
-import firebaseAdmin from "firebase-admin";
-import firebaseHelper from "./middleware/firebaseHelper";
-import { Server } from "http";
-import { swaggerSpec } from "./swagger";
-import swaggerUi from "swagger-ui-express";
+import process from 'process';
+import express from 'express';
+import cors from 'cors';
+import connectDB from './config/db';
+import passport from 'passport';
+import routes from './routes/routes';
+import secureRoutes from './routes/secureRoutes';
+import auth from './middleware/auth';
+import helmet from 'helmet';
+import compression from 'compression';
+import * as requestLogger from './middleware/requestLogger';
+import logger from './middleware/logger';
+import firebaseAdmin from 'firebase-admin';
+import firebaseHelper from './middleware/firebaseHelper';
+import { Server } from 'http';
+import { swaggerSpec } from './swagger';
+import swaggerUi from 'swagger-ui-express';
+import configurePassport from './config/passport';
+import fs from 'fs';
+import mongoose from 'mongoose';
 
 // set timezone
-process.env.TZ = "Europe/Amsterdam";
+process.env.TZ = 'Europe/Amsterdam';
 
 // main set of required environment variables
 function validateEnv() {
   const required = [
-    "NODE_ENV",
-    "PORT",
-    "MONGO_URI",
-    "GOOGLE_APPLICATION_CREDENTIALS",
+    'NODE_ENV',
+    'PORT',
+    'MONGO_URI',
+    'GOOGLE_APPLICATION_CREDENTIALS',
   ];
   const missing = required.filter((k) => !process.env[k]);
   if (missing.length > 0) {
-    logger.error(`Missing required env vars: ${missing.join(", ")}`);
+    logger.error(`Missing required env vars: ${missing.join(', ')}`);
     return false;
   }
   return true;
@@ -49,16 +50,17 @@ async function initFirebase() {
   const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (!credPath) {
     logger.warn(
-      "No GOOGLE_APPLICATION_CREDENTIALS provided - firebase disabled",
+      'No GOOGLE_APPLICATION_CREDENTIALS provided - firebase disabled'
     );
     return;
   }
   try {
-    const serviceAccount = require(credPath);
+    // Load service account JSON file
+    const serviceAccount = JSON.parse(fs.readFileSync(credPath, 'utf8'));
     firebaseAdmin.initializeApp({
       credential: firebaseAdmin.credential.cert(serviceAccount),
     });
-    logger.info("Firebase admin initialized");
+    logger.info('Firebase admin initialized');
   } catch (err: unknown) {
     logger.error(`Failed to initialize Firebase admin: ${err}`);
     throw err;
@@ -66,20 +68,20 @@ async function initFirebase() {
 }
 
 function setGlobalHandlers() {
-  process.on("uncaughtException", (err) => {
+  process.on('uncaughtException', (err) => {
     logger.error(`Uncaught exception - exiting: ${err}`);
     gracefulShutdown(1);
   });
 
-  process.on("unhandledRejection", (reason) => {
+  process.on('unhandledRejection', (reason) => {
     logger.error(`Unhandled Rejection - exiting: ${reason}`);
     gracefulShutdown(1);
   });
 
-  process.on("SIGINT", () => gracefulShutdown(0));
-  process.on("SIGTERM", () => gracefulShutdown(0));
+  process.on('SIGINT', () => gracefulShutdown(0));
+  process.on('SIGTERM', () => gracefulShutdown(0));
   // SIGUSR2 is commonly used by other processes to signal a restart, e.g., nodemon
-  process.on("SIGUSR2", () => {
+  process.on('SIGUSR2', () => {
     gracefulShutdown(0, true);
   });
 }
@@ -89,11 +91,11 @@ function setGlobalHandlers() {
 async function gracefulShutdown(exitCode = 0, restart = false) {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  logger.info("Started graceful shutdown...");
+  logger.info('Started graceful shutdown...');
 
   try {
     if (server) {
-      logger.info("Closing server...");
+      logger.info('Closing server...');
       // stop accepting new connections
       server.close((err: unknown) => {
         if (err) logger.error(`Error closing server: ${err}`);
@@ -106,7 +108,7 @@ async function gracefulShutdown(exitCode = 0, restart = false) {
     try {
       if (firebaseHelper) {
         await firebaseHelper.shutdown();
-        logger.info("Firebase shutdown completed.");
+        logger.info('Firebase shutdown completed.');
       }
     } catch (err: unknown) {
       logger.error(`Error shutting down firebase: ${err}`);
@@ -114,9 +116,8 @@ async function gracefulShutdown(exitCode = 0, restart = false) {
 
     // close DB connection
     try {
-      const mongoose = require("mongoose");
       await mongoose.connection.close(false);
-      logger.info("DB connection closed.");
+      logger.info('DB connection closed.');
     } catch (err: unknown) {
       logger.error(`Error closing DB: ${err}`);
     }
@@ -138,58 +139,54 @@ async function main() {
   if (!validateEnv()) {
     process.exit(1);
   }
-
   setGlobalHandlers();
-
   // initialize DB
   try {
     await connectDB();
-    logger.info("DB connected.");
+    logger.info('DB connected.');
   } catch (err: unknown) {
     logger.error(`Failed to connect to DB - exiting: ${err}`);
     process.exit(1);
   }
-
   // initialize firebase after database is initialized, as the notification scheduling by firebaseHelper queries the database.
   try {
     await initFirebase();
     firebaseHelper.setupNotifications();
   } catch (err: unknown) {
     logger.error(
-      `Firebase initialization failed - continuing without firebase: ${err}`,
+      `Firebase initialization failed - continuing without firebase: ${err}`
     );
   }
-
   const app = express();
 
-  if (process.env.TRUST_PROXY === "true") {
-    app.set("trust proxy", true);
+  if (process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', true);
   }
 
-  app.disable("x-powered-by");
+  app.disable('x-powered-by');
   app.use(helmet());
   app.use(cors());
   app.use(compression());
-  app.use(express.urlencoded({ extended: false, limit: "50mb" }));
-  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+  app.use(express.json({ limit: '50mb' }));
 
   // pino-http middleware
   app.use(requestLogger.createHttpLogger());
 
-  app.get("/health", (_req, res) => res.status(200).send("OK"));
+  app.get('/health', (_req, res) => res.status(200).send('OK'));
 
   // routes
   app.use(routes);
   app.use(passport.initialize());
-  require("./config/passport")(passport);
-  app.use("/secure", auth, secureRoutes);
+  configurePassport(passport);
+  app.use('/secure', auth, secureRoutes);
 
   // Swagger documentation
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // custom 404 + JSON parse error handler + global fallback
   app.use((_req, res, _next) => {
-    res.status(404).send("Unknown resource!");
+    res.status(404).send('Unknown resource!');
   });
 
   app.use(
@@ -197,37 +194,37 @@ async function main() {
       err: any,
       _req: express.Request,
       res: express.Response,
-      _next: express.NextFunction,
+      _next: express.NextFunction
     ) => {
       // Check for JSON parse errors from body-parser/express.json()
       if (
         err instanceof SyntaxError &&
-        "status" in err &&
+        'status' in err &&
         err.status === 400 &&
-        "body" in err
+        'body' in err
       ) {
         logger.error(`Invalid JSON body: ${err.message || err}`);
         return res.status(400).json({
           status: false,
-          error: "The JSON in the request body could not be parsed.",
+          error: 'The JSON in the request body could not be parsed.',
         });
       }
       logger.error(err);
-      res.status(500).send("Sorry, something went wrong!");
-    },
+      res.status(500).send('Sorry, something went wrong!');
+    }
   );
 
-  app.get("/robots.txt", function (_req, res) {
-    res.type("text/plain");
-    res.set("Cache-Control", "public, max-age=86400"); // 24 hour cache to avoid repetitive fetching by robot clients
-    res.send("User-agent: *\nDisallow: /");
+  app.get('/robots.txt', function (_req, res) {
+    res.type('text/plain');
+    res.set('Cache-Control', 'public, max-age=86400'); // 24 hour cache to avoid repetitive fetching by robot clients
+    res.send('User-agent: *\nDisallow: /');
   });
 
   // start server
   const PORT = Number(process.env.PORT || 3000);
   server = app.listen(PORT, () => {
     logger.info(
-      `BEACON Q server running in ${process.env.NODE_ENV} on port ${PORT}`,
+      `BEACON Q server running in ${process.env.NODE_ENV} on port ${PORT}`
     );
   });
 

@@ -1,11 +1,11 @@
 import {
   CourseAnnouncementDocument,
   CourseAnnouncementModel,
-} from "../../models/courseAnnouncement";
-import { PermissionModel, hasPermissions } from "../../models/permission";
-import mongoose from "mongoose";
-import logger from "../../middleware/logger";
-import { Response } from "express";
+} from '../../models/courseAnnouncement';
+import { PermissionModel, hasPermissions } from '../../models/permission';
+import mongoose from 'mongoose';
+import logger from '../../middleware/logger';
+import { Response } from 'express';
 
 // Possible status codes
 enum CreateOrUpdateCourseAnnouncementStatus {
@@ -22,11 +22,11 @@ enum GetCourseAnnouncementsStatus {
 
 class CreateOrUpdateCourseAnnouncementPermissionError extends Error {
   constructor() {
-    super("Lacking permission to update");
-    this.name = "CreateOrUpdateCourseAnnouncementPermissionError";
+    super('Lacking permission to update');
+    this.name = 'CreateOrUpdateCourseAnnouncementPermissionError';
     Object.setPrototypeOf(
       this,
-      CreateOrUpdateCourseAnnouncementPermissionError.prototype,
+      CreateOrUpdateCourseAnnouncementPermissionError.prototype
     );
   }
 }
@@ -34,19 +34,19 @@ class CreateOrUpdateCourseAnnouncementPermissionError extends Error {
 const functions = {
   createOrUpdateCourseAnnouncement: async function (
     req: Express.AuthenticatedRequest<{}, {}, { courseAnnouncement: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
-          "Course announcement creation failed: only teachers are authorized.",
+          'Course announcement creation failed: only teachers are authorized.',
       });
     }
     if (!req.body.courseAnnouncement) {
       return res
         .status(CreateOrUpdateCourseAnnouncementStatus.MissingArguments)
         .send({
-          message: "Course announcement creation failed: parameter missing.",
+          message: 'Course announcement creation failed: parameter missing.',
         });
     }
 
@@ -58,7 +58,7 @@ const functions = {
       return res
         .status(CreateOrUpdateCourseAnnouncementStatus.MissingArguments)
         .send({
-          message: "Course announcement creation failed: invalid JSON.",
+          message: 'Course announcement creation failed: invalid JSON.',
         });
     }
 
@@ -73,7 +73,7 @@ const functions = {
         .status(CreateOrUpdateCourseAnnouncementStatus.InternalError)
         .send({
           message:
-            "Course announcement creation failed: internal error (session).",
+            'Course announcement creation failed: internal error (session).',
         });
     }
 
@@ -86,7 +86,7 @@ const functions = {
         let existingAnnouncement: CourseAnnouncementDocument | null = null;
         if (incomingAnnouncement._id) {
           existingAnnouncement = await CourseAnnouncementModel.findById(
-            incomingAnnouncement._id,
+            incomingAnnouncement._id
           )
             .session(session)
             .exec();
@@ -95,14 +95,14 @@ const functions = {
         if (!existingAnnouncement) {
           // Create new announcement
           const newAnnouncement = new CourseAnnouncementModel(
-            incomingAnnouncement,
+            incomingAnnouncement
           );
           savedAnnouncement = await newAnnouncement.save({ session });
 
           // Create permission for the creator within same transaction
           const perm = new PermissionModel({
             user: req.token._id,
-            resourceType: "COURSE_ANNOUNCEMENT",
+            resourceType: 'COURSE_ANNOUNCEMENT',
             resource: savedAnnouncement._id,
             level: PermissionLevel.EXECUTE,
           });
@@ -116,7 +116,7 @@ const functions = {
           const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingAnnouncement._id,
-            resourceType: "COURSE_ANNOUNCEMENT",
+            resourceType: 'COURSE_ANNOUNCEMENT',
           })
             .session(session)
             .lean()
@@ -124,13 +124,13 @@ const functions = {
           if (
             !permission ||
             !Number.isInteger(permission.level) ||
-            !hasPermissions(["write"], permission.level)
+            !hasPermissions(['write'], permission.level)
           ) {
             throw new CreateOrUpdateCourseAnnouncementPermissionError();
           }
 
           const newAnnouncement = new CourseAnnouncementModel(
-            incomingAnnouncement,
+            incomingAnnouncement
           );
           newAnnouncement.version = existingAnnouncement.version + 1;
           /// Set {new: true} such that the updated model is returned by mongoose
@@ -138,13 +138,13 @@ const functions = {
             await CourseAnnouncementModel.findByIdAndUpdate(
               existingAnnouncement._id,
               newAnnouncement,
-              { new: true, runValidators: true, session },
+              { new: true, runValidators: true, session }
             ).exec();
           if (!updatedAnnouncement) {
-            throw new Error("Failed to update course announcement");
+            throw new Error('Failed to update course announcement');
           }
           logger.info(
-            "Updated course announcement: " + updatedAnnouncement._id,
+            'Updated course announcement: ' + updatedAnnouncement._id
           );
 
           savedAnnouncement = updatedAnnouncement;
@@ -154,20 +154,20 @@ const functions = {
 
       if (!savedAnnouncement) {
         logger.error(
-          "Course announcement transaction completed but no announcement was returned.",
+          'Course announcement transaction completed but no announcement was returned.'
         );
         return res
           .status(CreateOrUpdateCourseAnnouncementStatus.InternalError)
           .send({
-            message: "Course announcement creation failed: unknown error.",
+            message: 'Course announcement creation failed: unknown error.',
           });
       }
 
       return res.status(responseStatus).send({
         message:
           responseStatus === CreateOrUpdateCourseAnnouncementStatus.Created
-            ? "Course announcement created."
-            : "Course announcement updated.",
+            ? 'Course announcement created.'
+            : 'Course announcement updated.',
         courseAnnouncement: savedAnnouncement.toJSON(),
       });
     } catch (err: unknown) {
@@ -191,21 +191,21 @@ const functions = {
       {},
       { recentOnly?: string }
     >,
-    res: Response,
+    res: Response
   ) {
     if (!req.params.courseId) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
-        message: "Course announcements fetching failed: parameter missing.",
+        message: 'Course announcements fetching failed: parameter missing.',
       });
     }
     if (!mongoose.isValidObjectId(req.params.courseId)) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
-        message: "Course announcements fetching failed: parameter missing.",
+        message: 'Course announcements fetching failed: parameter missing.',
       });
     }
     const courseId = new mongoose.Types.ObjectId(req.params.courseId);
     let searchConditions: any[] = [{ course: courseId }];
-    if (String(req.query.recentOnly).toLowerCase() === "true") {
+    if (String(req.query.recentOnly).toLowerCase() === 'true') {
       const currentDate = new Date();
       const endDate = new Date(currentDate);
       endDate.setDate(currentDate.getDate() + 28);
@@ -224,14 +224,14 @@ const functions = {
         .lean()
         .exec();
       return res.status(GetCourseAnnouncementsStatus.Retrieved).send({
-        message: "Course announcements retrieved.",
+        message: 'Course announcements retrieved.',
         courseAnnouncements: courseAnnouncements,
       });
     } catch (err: unknown) {
       logger.error(err);
       return res.status(GetCourseAnnouncementsStatus.InternalError).send({
         message:
-          "Course announcements fetching for course(s) failed: a search error occurred.",
+          'Course announcements fetching for course(s) failed: a search error occurred.',
       });
     }
   },
@@ -241,12 +241,12 @@ const functions = {
       {},
       { courseIds: string; recentOnly: string }
     >,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.courseIds) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message:
-          "Course announcement fetching for course(s) failed: course IDs missing. [ERR924]",
+          'Course announcement fetching for course(s) failed: course IDs missing. [ERR924]',
       });
     }
     let courseIds: string[];
@@ -255,13 +255,13 @@ const functions = {
       if (!courseIds || !Array.isArray(courseIds) || courseIds.length === 0) {
         return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
           message:
-            "Course announcement fetching for course(s) failed: course IDs missing. [ERR924B]",
+            'Course announcement fetching for course(s) failed: course IDs missing. [ERR924B]',
         });
       }
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message:
-          "Course announcement fetching for course(s) failed: course IDs missing. [ERR924C]",
+          'Course announcement fetching for course(s) failed: course IDs missing. [ERR924C]',
       });
     }
 
@@ -272,12 +272,12 @@ const functions = {
     if (validCourseObjectIds.length === 0) {
       return res.status(GetCourseAnnouncementsStatus.MissingArguments).send({
         message:
-          "Course announcement fetching for course(s) failed: no valid course IDs provided.",
+          'Course announcement fetching for course(s) failed: no valid course IDs provided.',
       });
     }
 
     let searchConditions: any[] = [{ course: { $in: validCourseObjectIds } }];
-    if (String(req.body.recentOnly).toLowerCase() === "true") {
+    if (String(req.body.recentOnly).toLowerCase() === 'true') {
       const currentDate = new Date();
       const endDate = new Date(currentDate);
       endDate.setDate(currentDate.getDate() + 28);
@@ -295,14 +295,14 @@ const functions = {
         .lean()
         .exec();
       return res.status(GetCourseAnnouncementsStatus.Retrieved).send({
-        message: "Course announcements retrieved.",
+        message: 'Course announcements retrieved.',
         courseAnnouncements: courseAnnouncements,
       });
     } catch (err: unknown) {
       logger.error(err);
       return res.status(GetCourseAnnouncementsStatus.InternalError).send({
         message:
-          "Course announcements fetching for course(s) failed: a search error occurred.",
+          'Course announcements fetching for course(s) failed: a search error occurred.',
       });
     }
   },

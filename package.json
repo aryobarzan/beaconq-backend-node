@@ -6,10 +6,12 @@
   "scripts": {
     "generate:schemas": "node scripts/generateSchemas.js",
     "predev": "npm run generate:schemas",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "build": "tsc -p .",
     "build:watch": "tsc -p . --watch",
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
-    "start": "node dist/server.js",
+    "start": "node --env-file=.env dist/server.js",
     "typecheck": "tsc -p . --noEmit",
     "prepare": "husky"
   },

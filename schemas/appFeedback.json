@@ -6,7 +6,7 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "isAnonymous": {
           "type": "boolean"

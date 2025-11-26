@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
-import process from "process";
-import logger from "../middleware/logger";
+import mongoose from 'mongoose';
+import process from 'process';
+import logger from '../middleware/logger';
 
 async function connectDB() {
   const maxAttempts = 10;
@@ -8,31 +8,28 @@ async function connectDB() {
   while (attempt < maxAttempts) {
     try {
       attempt++;
-      const conn = await mongoose.connect(process.env.MONGO_URI || "", {});
+      const conn = await mongoose.connect(process.env.MONGO_URI || '', {});
       logger.info(`MongoDB Connected: ${conn.connection.host}`);
-
       // create indexes for GridFS-related collections (images, gallery_images)
+      const db = conn.connection.db;
+      if (!db) throw new Error('DB not found');
       try {
-        const db = conn.connection.db;
-        if (!db) throw new Error("DB not found");
-        const imageBucket = process.env.DATABASE_IMAGE_BUCKET || "images";
-        const galleryBucket = process.env.GALLERY_BUCKET || "gallery_images";
-
+        const imageBucket = process.env.DATABASE_IMAGE_BUCKET || 'images';
+        const galleryBucket = process.env.GALLERY_BUCKET || 'gallery_images';
         // ensure index on metadata.author and metadata.uploadDate for both buckets
         await db
           .collection(`${galleryBucket}.files`)
-          .createIndex({ "metadata.author": 1, "metadata.uploadDate": -1 });
+          .createIndex({ 'metadata.author': 1, 'metadata.uploadDate': -1 });
         await db
           .collection(`${imageBucket}.files`)
-          .createIndex({ "metadata.uploadDate": -1 });
+          .createIndex({ 'metadata.uploadDate': -1 });
         logger.info(
-          `Ensured GridFS metadata indexes for buckets: ${galleryBucket}, ${imageBucket}`,
+          `Ensured GridFS metadata indexes for buckets: ${galleryBucket}, ${imageBucket}`
         );
       } catch (indexErr: unknown) {
         // index creation is not fatal for startup -> we just log and continue.
         logger.warn(`Could not ensure GridFS indexes at startup: ${indexErr}`);
       }
-
       break;
     } catch (err: unknown) {
       logger.error(`Mongo connect attempt #${attempt} failed: ${err}`);
@@ -43,5 +40,4 @@ async function connectDB() {
     }
   }
 }
-
 export default connectDB;

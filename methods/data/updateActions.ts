@@ -1,11 +1,11 @@
-import { CourseDocument, CourseModel } from "../../models/course";
-import ModelHelper from "../../middleware/modelHelper";
-import { QuizDocument, QuizModel } from "../../models/quiz";
-import { ActivityDocument, ActivityModel } from "../../models/activity";
-import { TopicDocument, TopicModel } from "../../models/topic";
-import logger from "../../middleware/logger";
-import mongoose from "mongoose";
-import { Response } from "express";
+import { CourseDocument, CourseModel } from '../../models/course';
+import ModelHelper from '../../middleware/modelHelper';
+import { QuizDocument, QuizModel } from '../../models/quiz';
+import { ActivityDocument, ActivityModel } from '../../models/activity';
+import { TopicDocument, TopicModel } from '../../models/topic';
+import logger from '../../middleware/logger';
+import mongoose from 'mongoose';
+import { Response } from 'express';
 
 // Possible status codes
 enum CheckForUpdatesStatus {
@@ -43,7 +43,7 @@ enum CheckForTopicUpdatesStatus {
 const functions = {
   checkForCourseUpdates: async function (
     req: Express.AuthenticatedRequest<{}, {}, { courses: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.courses) {
       return res
@@ -53,7 +53,7 @@ const functions = {
     let usersCourses: { id: string; version: string }[];
     try {
       usersCourses = JSON.parse(req.body.courses);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(CheckForUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify courses (invalid ids).",
       });
@@ -105,7 +105,7 @@ const functions = {
       if (coursesToUpdate.length === 0) {
         return res
           .status(CheckForUpdatesStatus.UpToDate)
-          .send({ message: "Courses are already up to date." });
+          .send({ message: 'Courses are already up to date.' });
       }
 
       const populatedCourses =
@@ -116,7 +116,7 @@ const functions = {
         });
       }
       return res.status(CheckForUpdatesStatus.UpdatesAvailable).send({
-        message: "Updates are available.",
+        message: 'Updates are available.',
         // TODO: toJSON?
         courses: JSON.parse(JSON.stringify(populatedCourses)),
       });
@@ -129,7 +129,7 @@ const functions = {
   },
   checkForQuizUpdates: async function (
     req: Express.AuthenticatedRequest<{}, {}, { quizzes: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.quizzes) {
       return res
@@ -140,7 +140,7 @@ const functions = {
     let usersQuizzes: { id: string; version: string }[];
     try {
       usersQuizzes = JSON.parse(req.body.quizzes);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(CheckForQuizUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify quizzes (invalid ids).",
       });
@@ -192,7 +192,7 @@ const functions = {
       if (quizzesToUpdate.length === 0) {
         return res
           .status(CheckForQuizUpdatesStatus.UpToDate)
-          .send({ message: "Quizzes are already up to date." });
+          .send({ message: 'Quizzes are already up to date.' });
       }
 
       const populatedQuizzes = await ModelHelper.populateQuiz(quizzesToUpdate);
@@ -202,7 +202,7 @@ const functions = {
         });
       }
       return res.status(CheckForQuizUpdatesStatus.UpdatesAvailable).send({
-        message: "Updates are available.",
+        message: 'Updates are available.',
         quizzes: Array.isArray(populatedQuizzes)
           ? populatedQuizzes.map((q) => q.toJSON())
           : [populatedQuizzes.toJSON()],
@@ -216,7 +216,7 @@ const functions = {
   },
   checkForActivityUpdates: async function (
     req: Express.AuthenticatedRequest<{}, {}, { activities: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.activities) {
       return res
@@ -227,7 +227,7 @@ const functions = {
     let usersActivities: { id: string; version: string }[];
     try {
       usersActivities = JSON.parse(req.body.activities);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(CheckForActivityUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify activities (invalid ids).",
       });
@@ -261,7 +261,7 @@ const functions = {
       const activities = await ActivityModel.find({
         _id: { $in: activityObjectIds },
       })
-        .populate("topics")
+        .populate('topics')
         .exec();
       if (!activities || activities.length === 0) {
         return res
@@ -282,11 +282,11 @@ const functions = {
       if (activitiesToUpdate.length === 0) {
         return res
           .status(CheckForActivityUpdatesStatus.UpToDate)
-          .send({ message: "Activities are already up to date." });
+          .send({ message: 'Activities are already up to date.' });
       }
 
       return res.status(CheckForActivityUpdatesStatus.UpdatesAvailable).send({
-        message: "Updates are available.",
+        message: 'Updates are available.',
         activities: activitiesToUpdate.map((a) => a.toJSON()),
       });
     } catch (err: unknown) {
@@ -298,7 +298,7 @@ const functions = {
   },
   checkForTopicUpdates: async function (
     req: Express.AuthenticatedRequest<{}, {}, { topics: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.topics) {
       return res
@@ -309,7 +309,7 @@ const functions = {
     let usersTopics: { id: string; version: string }[];
     try {
       usersTopics = JSON.parse(req.body.topics);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(CheckForTopicUpdatesStatus.MissingArguments).send({
         message: "Can't check for updates: specify topics (invalid ids).",
       });
@@ -361,10 +361,10 @@ const functions = {
       if (topicsToUpdate.length === 0) {
         return res
           .status(CheckForTopicUpdatesStatus.UpToDate)
-          .send({ message: "Topics are already up to date." });
+          .send({ message: 'Topics are already up to date.' });
       }
       return res.status(CheckForTopicUpdatesStatus.UpdatesAvailable).send({
-        message: "Updates are available.",
+        message: 'Updates are available.',
         topics: topicsToUpdate.map((t) => t.toJSON()),
       });
     } catch (err: unknown) {

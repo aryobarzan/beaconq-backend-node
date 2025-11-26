@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
-import { ActivityUserAnswerModel } from "../models/logs/activityUserAnswer";
-import { PlayContextModel } from "../models/logs/playContext";
-import { ScheduledQuizUserStartModel } from "../models/logs/scheduledQuizUserStart";
-import { SurveyAnswerModel } from "../models/logs/surveyAnswer";
-import logger from "../middleware/logger";
-import { Response } from "express";
+import mongoose from 'mongoose';
+import { ActivityUserAnswerModel } from '../models/logs/activityUserAnswer';
+import { PlayContextModel } from '../models/logs/playContext';
+import { ScheduledQuizUserStartModel } from '../models/logs/scheduledQuizUserStart';
+import { SurveyAnswerModel } from '../models/logs/surveyAnswer';
+import logger from '../middleware/logger';
+import { Response } from 'express';
 
 // Possible status codes
 enum GetLogsForScheduledQuizzesStatus {
@@ -36,12 +36,12 @@ const functions = {
   // Check status of scheduled quizzes
   getLogsForScheduledQuizzes: async function (
     req: Express.AuthenticatedRequest<{}, {}, { scheduledQuizIds: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
-          "Failed to retrieve log data for scheduled quizzes: teachers only.",
+          'Failed to retrieve log data for scheduled quizzes: teachers only.',
       });
     }
     if (!req.body.scheduledQuizIds) {
@@ -49,18 +49,18 @@ const functions = {
         .status(GetLogsForScheduledQuizzesStatus.MissingArguments)
         .send({
           message:
-            "Failed to retrieve log data for scheduled quizzes: missing quiz IDs.",
+            'Failed to retrieve log data for scheduled quizzes: missing quiz IDs.',
         });
     }
     let scheduledQuizIdsRaw: any;
     try {
       scheduledQuizIdsRaw = JSON.parse(req.body.scheduledQuizIds);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res
         .status(GetLogsForScheduledQuizzesStatus.MissingArguments)
         .send({
           message:
-            "Failed to retrieve log data for scheduled quizzes: invalid quiz IDs.",
+            'Failed to retrieve log data for scheduled quizzes: invalid quiz IDs.',
         });
     }
 
@@ -69,7 +69,7 @@ const functions = {
       for (const id of scheduledQuizIdsRaw) {
         try {
           scheduledQuizIds.push(new mongoose.Types.ObjectId(String(id)));
-        } catch (_) {
+        } catch (_: unknown) {
           // We just skip invalid IDs
         }
       }
@@ -80,7 +80,7 @@ const functions = {
         .status(GetLogsForScheduledQuizzesStatus.MissingArguments)
         .send({
           message:
-            "Failed to retrieve log data for scheduled quizzes: no valid quiz IDs.",
+            'Failed to retrieve log data for scheduled quizzes: no valid quiz IDs.',
         });
     }
     try {
@@ -90,7 +90,7 @@ const functions = {
           $in: scheduledQuizIds,
         },
       })
-        .populate("user", "username role")
+        .populate('user', 'username role')
         .lean()
         .exec();
       // Promise 2
@@ -136,24 +136,24 @@ const functions = {
       }
       return res.status(GetLogsForScheduledQuizzesStatus.Retrieved).send({
         results,
-        message: "Retrieved logs for scheduled quizzes.",
+        message: 'Retrieved logs for scheduled quizzes.',
       });
     } catch (err: unknown) {
       logger.error(err);
       res.status(GetLogsForScheduledQuizzesStatus.InternalError).send({
         message:
-          "Failed to retrieve log data for scheduled quizzes: an internal error occurred.",
+          'Failed to retrieve log data for scheduled quizzes: an internal error occurred.',
       });
     }
   },
   getSurveyAnswersForScheduledQuiz: async function (
     req: Express.AuthenticatedRequest<{ scheduledQuizId: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
-          "Failed to retrieve log data for scheduled quiz: teachers only.",
+          'Failed to retrieve log data for scheduled quiz: teachers only.',
       });
     }
     if (!req.params.scheduledQuizId) {
@@ -161,40 +161,40 @@ const functions = {
         .status(GetSurveyAnswersForScheduledQuizStatus.MissingArguments)
         .send({
           message:
-            "Failed to retrieve survey answers for scheduled quiz: missing quiz IDs.",
+            'Failed to retrieve survey answers for scheduled quiz: missing quiz IDs.',
         });
     }
 
     // Rather than large switch, we use sets for O(1) lookups, as well as for more readable code.
     const ratingQuestions = new Set([
-      "How difficult did you find the quiz?",
-      "How would you assess your current level of understanding of the overall course?",
+      'How difficult did you find the quiz?',
+      'How would you assess your current level of understanding of the overall course?',
       "How much did you prepare for this week's lecture?",
-      "How motivated were you to play this quiz?",
-      "How sufficient did you find the time for playing this quiz?",
+      'How motivated were you to play this quiz?',
+      'How sufficient did you find the time for playing this quiz?',
       "How much did the quiz lower your initial confidence in your understanding of the lecture's topics?",
-      "How much did you restudy your lecture material after your last played quiz?",
-      "How much did you adjust your studying to focus on the topics you found difficult in the previous quiz you played?",
-      "How much had you already studied for your final written exam before this quiz?",
-      "How much did this quiz improve your confidence for your upcoming final written exam?",
-      "How useful did you find the dynamic difficulty adjustment of the quizzes?",
-      "How beneficial was the BEACON Q app for your studies during this semester?",
-      "How satisfied were you with the BEACON Q app experience?",
+      'How much did you restudy your lecture material after your last played quiz?',
+      'How much did you adjust your studying to focus on the topics you found difficult in the previous quiz you played?',
+      'How much had you already studied for your final written exam before this quiz?',
+      'How much did this quiz improve your confidence for your upcoming final written exam?',
+      'How useful did you find the dynamic difficulty adjustment of the quizzes?',
+      'How beneficial was the BEACON Q app for your studies during this semester?',
+      'How satisfied were you with the BEACON Q app experience?',
     ]);
 
     const yesNoQuestions = new Set([
       "Will you be restudying this quiz' topics before the next lecture?",
-      "Will you be studying more for your final written exam based on your performance in this quiz?",
-      "Did you find the scheduled nature of the quizzes too restrictive?",
-      "Did the scheduling of the quizzes motivate you to play them in time?",
-      "Did you often forget to check the BEACON Q app for new quizzes?",
+      'Will you be studying more for your final written exam based on your performance in this quiz?',
+      'Did you find the scheduled nature of the quizzes too restrictive?',
+      'Did the scheduling of the quizzes motivate you to play them in time?',
+      'Did you often forget to check the BEACON Q app for new quizzes?',
     ]);
 
     try {
       const surveyAnswers = await SurveyAnswerModel.find({
         scheduledQuiz: new mongoose.Types.ObjectId(req.params.scheduledQuizId),
       })
-        .populate("user", "username role")
+        .populate('user', 'username role')
         .lean()
         .exec();
 
@@ -208,14 +208,14 @@ const functions = {
             answer.max = 5;
           } else if (yesNoQuestions.has(question)) {
             answer.isMultipleChoice = false;
-            answer.choices = ["Yes", "No"];
+            answer.choices = ['Yes', 'No'];
           }
         }
       }
 
       return res.status(GetSurveyAnswersForScheduledQuizStatus.Retrieved).send({
         surveyAnswers: surveyAnswers,
-        message: "Retrieved survey answers for scheduled quiz.",
+        message: 'Retrieved survey answers for scheduled quiz.',
       });
     } catch (err: unknown) {
       logger.error(err);
@@ -223,22 +223,22 @@ const functions = {
         .status(GetSurveyAnswersForScheduledQuizStatus.InternalError)
         .send({
           message:
-            "Failed to retrieve survey answers for scheduled quiz: an internal error occurred.",
+            'Failed to retrieve survey answers for scheduled quiz: an internal error occurred.',
         });
     }
   },
   getTrialQuizAnswers: async function (
     req: Express.AuthenticatedRequest<{ courseId: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
-        message: "Failed to retrieve log data for trial quiz: teachers only.",
+        message: 'Failed to retrieve log data for trial quiz: teachers only.',
       });
     }
     if (!req.params.courseId) {
       return res.status(GetTrialQuizAnswersStatus.MissingArguments).send({
-        message: "Failed to retrieve trial quiz answers: missing argument.",
+        message: 'Failed to retrieve trial quiz answers: missing argument.',
       });
     }
     let courseId: mongoose.Types.ObjectId;
@@ -248,20 +248,20 @@ const functions = {
       logger.error(err);
       return res.status(GetTrialQuizAnswersStatus.MissingArguments).send({
         message:
-          "Failed to retrieve trial quiz answers: missing argument. (ERR1)",
+          'Failed to retrieve trial quiz answers: missing argument. (ERR1)',
       });
     }
     try {
       const playContexts = await PlayContextModel.find({
         course: courseId,
-        playType: "trialQuiz",
+        playType: 'trialQuiz',
       })
-        .select("contextId -_id")
+        .select('contextId -_id')
         .lean()
         .exec();
       if (!playContexts || playContexts.length === 0) {
         return res.status(GetTrialQuizAnswersStatus.Retrieved).send({
-          message: "No answers found for trial quiz.",
+          message: 'No answers found for trial quiz.',
           answers: [],
         });
       }
@@ -273,32 +273,32 @@ const functions = {
         .exec();
       if (!userAnswers || userAnswers.length === 0) {
         res.status(GetTrialQuizAnswersStatus.Retrieved).send({
-          message: "No answers found for trial quiz.",
+          message: 'No answers found for trial quiz.',
           answers: [],
         });
         return;
       }
       const result = await ActivityUserAnswerModel.populate(userAnswers, [
-        { path: "user", select: { username: 1, role: 1 } },
+        { path: 'user', select: { username: 1, role: 1 } },
       ]);
       return res.status(GetTrialQuizAnswersStatus.Retrieved).send({
-        message: "Answers found for trial quiz.",
+        message: 'Answers found for trial quiz.',
         answers: result,
       });
     } catch (err: unknown) {
       logger.error(err);
       return res.status(GetTrialQuizAnswersStatus.InternalError).send({
-        message: "An error occurred retrieving trial quiz answers. (ERR2)",
+        message: 'An error occurred retrieving trial quiz answers. (ERR2)',
       });
     }
   },
   getActivityUserAnswers: async function (
     req: Express.AuthenticatedRequest<{ courseId: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.params.courseId) {
       return res.status(GetActivityUserAnswersStatus.MissingArguments).send({
-        message: "Failed to retrieve activity answers: missing argument.",
+        message: 'Failed to retrieve activity answers: missing argument.',
       });
     }
     let courseId: mongoose.Types.ObjectId;
@@ -308,7 +308,7 @@ const functions = {
       logger.error(err);
       return res.status(GetActivityUserAnswersStatus.MissingArguments).send({
         message:
-          "Failed to retrieve activity answers: missing argument. (ERR1)",
+          'Failed to retrieve activity answers: missing argument. (ERR1)',
       });
     }
 
@@ -325,26 +325,26 @@ const functions = {
       const userAnswers = await ActivityUserAnswerModel.find({
         courseContext: courseId,
       })
-        .populate("user", "username role")
+        .populate('user', 'username role')
         .lean()
         .exec();
 
       if (!userAnswers || userAnswers.length === 0) {
         return res.status(GetActivityUserAnswersStatus.Retrieved).send({
-          message: "No answers found.",
+          message: 'No answers found.',
           answers: [],
         });
       }
       // When we send the data to the client using res.send(...), userAnswers will automatically have JSON.stringify() applied to it.
       // In particular, because we used lean() earlier, this serialization will be much faster due to the plain JavaScript objects we're working with here.
       return res.status(GetActivityUserAnswersStatus.Retrieved).send({
-        message: "Answers found.",
+        message: 'Answers found.',
         answers: userAnswers,
       });
     } catch (err: unknown) {
       logger.error(err);
       return res.status(GetActivityUserAnswersStatus.InternalError).send({
-        message: "An error occurred retrieving answers.",
+        message: 'An error occurred retrieving answers.',
       });
     }
   },

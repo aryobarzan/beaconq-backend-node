@@ -17,7 +17,7 @@
         "beaconResources": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/BeaconResource"
+            "$ref": "#/components/schemas/BeaconResource"
           }
         },
         "createdAt": {

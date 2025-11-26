@@ -6,14 +6,14 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "clientTimestamp": {
           "type": "string",
           "format": "date-time"
         },
         "course": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "interactionType": {
           "type": "string"

@@ -6,7 +6,7 @@
       "type": "object",
       "properties": {
         "course": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "patron": {
           "type": "string"

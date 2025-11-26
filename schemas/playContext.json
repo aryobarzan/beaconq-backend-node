@@ -9,7 +9,7 @@
           "type": "string"
         },
         "user": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "playType": {
           "type": "string",
@@ -28,26 +28,26 @@
         "activities": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Types.ObjectId"
+            "type": "string"
           }
         },
         "topics": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Types.ObjectId"
+            "type": "string"
           }
         },
         "course": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "courseSessions": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Types.ObjectId"
+            "type": "string"
           }
         },
         "scheduledQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "logAnswers": {
           "type": "boolean"
@@ -61,7 +61,7 @@
         "additionalActivities": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Types.ObjectId"
+            "type": "string"
           }
         },
         "reviewOptions": {

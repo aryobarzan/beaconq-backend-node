@@ -1,14 +1,14 @@
-import logger from "../../middleware/logger";
-import { Response } from "express";
-import { PermissionModel, hasPermissions } from "../../models/permission";
-import { CourseDocument, CourseModel } from "../../models/course";
+import logger from '../../middleware/logger';
+import { Response } from 'express';
+import { PermissionModel, hasPermissions } from '../../models/permission';
+import { CourseDocument, CourseModel } from '../../models/course';
 import {
   CourseRegistrationDocument,
   CourseRegistrationModel,
-} from "../../models/courseRegistration";
-import ModelHelper from "../../middleware/modelHelper";
-import firebaseHelper from "../../middleware/firebaseHelper";
-import mongoose from "mongoose";
+} from '../../models/courseRegistration';
+import ModelHelper from '../../middleware/modelHelper';
+import firebaseHelper from '../../middleware/firebaseHelper';
+import mongoose from 'mongoose';
 
 // Possible status codes
 enum CreateOrUpdateCourseStatus {
@@ -52,16 +52,16 @@ enum GetRegisteredUsersStatus {
 
 class CourseRegistrationLimitReachedError extends Error {
   constructor() {
-    super("Course registration limit reached");
-    this.name = "CourseRegistrationLimitReachedError";
+    super('Course registration limit reached');
+    this.name = 'CourseRegistrationLimitReachedError';
     Object.setPrototypeOf(this, CourseRegistrationLimitReachedError.prototype);
   }
 }
 
 class CreateOrUpdateCoursePermissionError extends Error {
   constructor() {
-    super("Lacking permission to update");
-    this.name = "CreateOrUpdateCoursePermissionError";
+    super('Lacking permission to update');
+    this.name = 'CreateOrUpdateCoursePermissionError';
     Object.setPrototypeOf(this, CreateOrUpdateCoursePermissionError.prototype);
   }
 }
@@ -69,26 +69,26 @@ class CreateOrUpdateCoursePermissionError extends Error {
 const functions = {
   createOrUpdateCourse: async function (
     req: Express.AuthenticatedRequest<{}, {}, { course: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
-        message: "Course creation failed: only teachers are authorized.",
+        message: 'Course creation failed: only teachers are authorized.',
       });
     }
     if (!req.body.course) {
       return res
         .status(CreateOrUpdateCourseStatus.MissingArguments)
-        .send({ message: "Course creation failed: course parameter missing." });
+        .send({ message: 'Course creation failed: course parameter missing.' });
     }
 
     let newCourse: CourseDocument;
     try {
       newCourse = new CourseModel(JSON.parse(req.body.course));
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(CreateOrUpdateCourseStatus.InternalError).send({
         message:
-          "Course creation failed: course could not be parsed/deserialized.",
+          'Course creation failed: course could not be parsed/deserialized.',
       });
     }
 
@@ -116,7 +116,7 @@ const functions = {
           const savedCourse = await newCourse.save({ session });
           await new PermissionModel({
             user: req.token._id,
-            resourceType: "COURSE",
+            resourceType: 'COURSE',
             resource: savedCourse._id,
             level: PermissionLevel.EXECUTE,
           }).save({ session });
@@ -124,7 +124,7 @@ const functions = {
           const populatedCourse = await ModelHelper.populateCourse(savedCourse);
           if (!populatedCourse) {
             throw new Error(
-              "Course created but failed to populate course properties.",
+              'Course created but failed to populate course properties.'
             );
           }
           result = populatedCourse as CourseDocument;
@@ -135,7 +135,7 @@ const functions = {
           const permission = await PermissionModel.findOne({
             user: req.token._id,
             resource: existingCourse._id,
-            resourceType: "COURSE",
+            resourceType: 'COURSE',
           })
             .session(session)
             .lean()
@@ -143,7 +143,7 @@ const functions = {
           if (
             !permission ||
             !Number.isInteger(permission.level) ||
-            !hasPermissions(["write"], permission.level)
+            !hasPermissions(['write'], permission.level)
           ) {
             throw new CreateOrUpdateCoursePermissionError();
           }
@@ -152,18 +152,18 @@ const functions = {
           const updatedCourse = await CourseModel.findByIdAndUpdate(
             existingCourse._id,
             newCourse,
-            { new: true, session },
+            { new: true, session }
           ).exec();
           if (!updatedCourse) {
-            throw new Error("Failed to update course");
+            throw new Error('Failed to update course');
           }
 
-          logger.info("Updated course: " + updatedCourse._id);
+          logger.info('Updated course: ' + updatedCourse._id);
           const populatedCourse =
             await ModelHelper.populateCourse(updatedCourse);
           if (!populatedCourse) {
             throw new Error(
-              "Course updated but failed to populate course properties.",
+              'Course updated but failed to populate course properties.'
             );
           }
           result = populatedCourse as CourseDocument;
@@ -175,15 +175,15 @@ const functions = {
         firebaseHelper.refreshCourseNotifications(result._id);
         const message =
           responseStatusCode == CreateOrUpdateCourseStatus.Created
-            ? "Course created."
-            : "Course updated.";
+            ? 'Course created.'
+            : 'Course updated.';
         return res.status(responseStatusCode).send({
           message: message,
           course: result.toJSON(),
         });
       } else {
         return res.status(CreateOrUpdateCourseStatus.InternalError).send({
-          message: "Course creation/update failed: internal error.",
+          message: 'Course creation/update failed: internal error.',
         });
       }
     } catch (err: unknown) {
@@ -200,21 +200,21 @@ const functions = {
   },
   getCourses: async function (
     req: Express.AuthenticatedRequest,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
-        message: "Course fetching failed: only teachers are authorized.",
+        message: 'Course fetching failed: only teachers are authorized.',
       });
     }
     try {
       const courses = await CourseModel.aggregate([
         {
           $lookup: {
-            from: "permissions",
-            localField: "_id",
-            foreignField: "resource",
-            as: "permissions",
+            from: 'permissions',
+            localField: '_id',
+            foreignField: 'resource',
+            as: 'permissions',
           },
         },
         {
@@ -222,25 +222,25 @@ const functions = {
             permissions: {
               // Important to use $elemMatch such that the same Permission document is used for these field checks
               $elemMatch: {
-                resourceType: "COURSE",
+                resourceType: 'COURSE',
                 user: new mongoose.Types.ObjectId(req.token._id),
                 level: { $gte: PermissionLevel.READ },
               },
             },
           },
         },
-        { $unset: ["permissions"] },
+        { $unset: ['permissions'] },
       ]).exec();
       if (!courses || courses.length === 0) {
         return res
           .status(GetCoursesStatus.None)
-          .send({ message: "Course fetching failed: no courses found." });
+          .send({ message: 'Course fetching failed: no courses found.' });
       }
       const populatedCourses = await ModelHelper.populateCourse(courses);
       if (!populatedCourses) {
         return res.status(GetCoursesStatus.InternalError).send({
           message:
-            "Course fetching failed: failed to populate course properties.",
+            'Course fetching failed: failed to populate course properties.',
         });
       }
       return res.status(GetCoursesStatus.Retrieved).send({
@@ -252,7 +252,7 @@ const functions = {
       logger.error(err);
       return res.status(GetCoursesStatus.InternalError).send({
         message:
-          "Course fetching failed: failed to populate course properties. (error)",
+          'Course fetching failed: failed to populate course properties. (error)',
       });
     }
   },
@@ -260,11 +260,11 @@ const functions = {
   // User (Student) actions
   registerToCourse: async function (
     req: Express.AuthenticatedRequest<{}, {}, { accessKey: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.accessKey) {
       return res.status(RegisterCourseStatus.MissingArgument).send({
-        message: "Course registration failed: access key was not indicated.",
+        message: 'Course registration failed: access key was not indicated.',
       });
     }
 
@@ -281,7 +281,7 @@ const functions = {
     }
     if (!course) {
       logger.warn(
-        `Course registration failed: access key ${accessKey} not found.`,
+        `Course registration failed: access key ${accessKey} not found.`
       );
       return res.status(RegisterCourseStatus.InvalidAccessKey).send({
         message: `Course registration failed: a course with the access key ${accessKey} does not exist.`,
@@ -291,7 +291,7 @@ const functions = {
     let session: mongoose.ClientSession;
     try {
       session = await mongoose.startSession();
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(RegisterCourseStatus.InternalError).send({
         message: `Course registration failed: internal error (session).`,
       });
@@ -376,13 +376,13 @@ const functions = {
       if (!populatedCourse) {
         return res.status(RegisterCourseStatus.InternalError).send({
           message:
-            "Course registration succeeded but failed to populate course.",
+            'Course registration succeeded but failed to populate course.',
         });
       }
       populatedCourse = populatedCourse as CourseDocument;
       if (!registrationResult) {
         return res.status(RegisterCourseStatus.InternalError).send({
-          message: "Course registration failed: internal error.",
+          message: 'Course registration failed: internal error.',
         });
       }
       // Note: we don't send the CourseRegistration object as part of the response, as currently the client just expects the Course object itself.
@@ -401,7 +401,7 @@ const functions = {
       logger.error(err);
       if (err instanceof CourseRegistrationLimitReachedError) {
         return res.status(RegisterCourseStatus.LimitReached).send({
-          message: "Course registration limit reached.",
+          message: 'Course registration limit reached.',
         });
       }
 
@@ -412,7 +412,7 @@ const functions = {
         err.code === 11000
       ) {
         return res.status(RegisterCourseStatus.AlreadyRegistered).send({
-          message: "Course registration: user already registered.",
+          message: 'Course registration: user already registered.',
         });
       }
       // unknown error
@@ -425,17 +425,17 @@ const functions = {
   },
   deregisterFromCourse: async function (
     req: Express.AuthenticatedRequest<{}, {}, { courseId: string }>,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.courseId) {
-      logger.warn("Course deregistration failed: course id was not indicated.");
+      logger.warn('Course deregistration failed: course id was not indicated.');
       return res.status(UnregisterCourseStatus.MissingArgument).send({
-        message: "Course deregistration failed: course id was not indicated.",
+        message: 'Course deregistration failed: course id was not indicated.',
       });
     }
     if (!mongoose.isValidObjectId(req.body.courseId)) {
       return res.status(UnregisterCourseStatus.InvalidCourseId).send({
-        message: "Course deregistration failed: course id is invalid.",
+        message: 'Course deregistration failed: course id is invalid.',
       });
     }
     const courseId = new mongoose.Types.ObjectId(req.body.courseId);
@@ -444,18 +444,18 @@ const functions = {
         await CourseRegistrationModel.findOneAndUpdate(
           { course: courseId, user: req.token._id, isActive: true },
           { $set: { isActive: false } },
-          { new: true },
+          { new: true }
         ).exec();
 
       if (!updatedCourseRegistration) {
         // either not registered or the existing CourseRegistration is already inactive
         return res.status(UnregisterCourseStatus.NotRegistered).send({
-          message: "Course deregistration failed: user is not registered.",
+          message: 'Course deregistration failed: user is not registered.',
         });
       }
 
       return res.status(UnregisterCourseStatus.Unregistered).send({
-        message: "Deregistered from the course.",
+        message: 'Deregistered from the course.',
       });
     } catch (err: unknown) {
       logger.error(err);
@@ -466,7 +466,7 @@ const functions = {
   },
   getRegisteredCoursesForUser: async function (
     req: Express.AuthenticatedRequest<{}, {}, {}, { metadataOnly?: string }>,
-    res: Response,
+    res: Response
   ) {
     const userId = new mongoose.Types.ObjectId(req.token._id);
 
@@ -476,8 +476,8 @@ const functions = {
       const courses = await CourseModel.aggregate([
         {
           $lookup: {
-            from: "course_registrations",
-            let: { courseId: "$_id" },
+            from: 'course_registrations',
+            let: { courseId: '$_id' },
             pipeline: [
               {
                 $match: {
@@ -485,36 +485,36 @@ const functions = {
                     $and: [
                       // $$courseId is the _id field of the current Course that is being matched against the CourseRegistration documents.
                       // This stems from the earlier " let: { courseId: "$_id" }"
-                      { $eq: ["$course", "$$courseId"] },
-                      { $eq: ["$user", userId] },
-                      { $eq: ["$isActive", true] },
+                      { $eq: ['$course', '$$courseId'] },
+                      { $eq: ['$user', userId] },
+                      { $eq: ['$isActive', true] },
                     ],
                   },
                 },
               },
             ],
-            as: "registrations",
+            as: 'registrations',
           },
         },
         // only keep courses where the lookup produced at least one registration for the user
         { $match: { registrations: { $ne: [] } } },
         // remove the temporary registrations array
-        { $unset: ["registrations"] },
+        { $unset: ['registrations'] },
       ]).exec();
 
       if (!courses || courses.length === 0) {
         return res
           .status(GetRegisteredCoursesStatus.None)
-          .send({ message: "No registered courses found." });
+          .send({ message: 'No registered courses found.' });
       }
 
       // The client doesn't want the courses populated.
       if (
         req.query.metadataOnly &&
-        String(req.query.metadataOnly).toLowerCase() === "true"
+        String(req.query.metadataOnly).toLowerCase() === 'true'
       ) {
         return res.status(GetRegisteredCoursesStatus.Retrieved).send({
-          message: "Registered courses downloaded.",
+          message: 'Registered courses downloaded.',
           courses: courses.map((c) => c.toJSON()),
         });
       }
@@ -524,72 +524,72 @@ const functions = {
       if (!populatedCourses) {
         return res.status(GetRegisteredCoursesStatus.InternalError).send({
           message:
-            "Registered courses could not be downloaded: error when populating.",
+            'Registered courses could not be downloaded: error when populating.',
         });
       }
       populatedCourses = populatedCourses as CourseDocument[];
       return res.status(GetRegisteredCoursesStatus.Retrieved).send({
-        message: "Registered courses downloaded.",
+        message: 'Registered courses downloaded.',
         courses: populatedCourses.map((c) => c.toJSON()),
       });
     } catch (err: unknown) {
       logger.error(err);
       return res.status(GetRegisteredCoursesStatus.InternalError).send({
         message:
-          "Registered courses could not be downloaded: error when populating.",
+          'Registered courses could not be downloaded: error when populating.',
       });
     }
   },
   getDemoCourseAccessKey: function (
     _: Express.AuthenticatedRequest,
-    res: Response,
+    res: Response
   ) {
     return res.status(200).send({
-      accessKey: "90EA53F0",
-      message: "Demo course access key retrieved.",
+      accessKey: '90EA53F0',
+      message: 'Demo course access key retrieved.',
     });
   },
   // For teachers
   getUserRegistrationsForCourse: async function (
     req: Express.AuthenticatedRequest<{ courseId: string }>,
-    res: Response,
+    res: Response
   ) {
     if (req.token.role !== UserRole.TEACHER) {
       return res.status(403).send({
         message:
-          "Fetching registered users for course failed: only teachers are authorized.",
+          'Fetching registered users for course failed: only teachers are authorized.',
       });
     }
     if (!req.params.courseId) {
       return res.status(GetRegisteredUsersStatus.MissingArgument).send({
-        message: "Course registered users fetching failed: missing course id.",
+        message: 'Course registered users fetching failed: missing course id.',
       });
     }
     if (!mongoose.isValidObjectId(req.params.courseId)) {
       return res.status(GetRegisteredUsersStatus.InternalError).send({
-        message: "Course registered users fetching failed: invalid course id.",
+        message: 'Course registered users fetching failed: invalid course id.',
       });
     }
     try {
       const course = await CourseModel.findById(
-        new mongoose.Types.ObjectId(req.params.courseId),
+        new mongoose.Types.ObjectId(req.params.courseId)
       ).exec();
       if (!course) {
         return res.status(GetRegisteredUsersStatus.None).send({
           message:
-            "Course registered users fetching failed: course could not be found.",
+            'Course registered users fetching failed: course could not be found.',
         });
       }
 
       const courseRegistrations = await CourseRegistrationModel.find({
         course: course._id,
       })
-        .populate("user", "username role")
+        .populate('user', 'username role')
         .lean()
         .exec();
       if (!courseRegistrations || courseRegistrations.length === 0) {
         return res.status(GetRegisteredUsersStatus.None).send({
-          message: "No user registrations available for that course.",
+          message: 'No user registrations available for that course.',
         });
       }
       return res
@@ -598,7 +598,7 @@ const functions = {
     } catch (err: unknown) {
       logger.error(err);
       return res.status(GetRegisteredUsersStatus.InternalError).send({
-        message: "Course registered users fetching failed: internal error.",
+        message: 'Course registered users fetching failed: internal error.',
       });
     }
   },

@@ -10,7 +10,7 @@ npm-debug.log
 dist
 
 # Environment
-.env
+# .env
 .env.local
 .env.*.local
 

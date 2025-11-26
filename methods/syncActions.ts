@@ -1,12 +1,12 @@
-import mongoose, { FlattenMaps } from "mongoose";
-import { DateTime } from "luxon";
-import logger from "../middleware/logger";
-import { FSRSDocument, FSRSModel } from "../models/fsrsModel";
+import mongoose, { FlattenMaps } from 'mongoose';
+import { DateTime } from 'luxon';
+import logger from '../middleware/logger';
+import { FSRSDocument, FSRSModel } from '../models/fsrsModel';
 import {
   ActivityUserAnswerDocument,
   ActivityUserAnswerModel,
-} from "../models/logs/activityUserAnswer";
-import { Response } from "express";
+} from '../models/logs/activityUserAnswer';
+import { Response } from 'express';
 
 // Possible status codes
 enum SyncFSRSModelsStatus {
@@ -33,12 +33,12 @@ const functions = {
       {},
       { fsrsModels: string; dataIds?: string }
     >,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.fsrsModels) {
       return res
         .status(SyncFSRSModelsStatus.MissingArguments)
-        .send({ message: "FSRS model sync failed: missing argument." });
+        .send({ message: 'FSRS model sync failed: missing argument.' });
     }
 
     try {
@@ -47,11 +47,11 @@ const functions = {
       const fsrsModels: FSRSDocument[] = [];
 
       for (let i in fsrsModelsJSON) {
-        fsrsModelsJSON[i]["user"] = userId;
+        fsrsModelsJSON[i]['user'] = userId;
         try {
           fsrsModels.push(new FSRSModel(fsrsModelsJSON[i]));
         } catch (err: unknown) {
-          logger.error("Failed to decode FSRS model in syncFSRSModels: " + err);
+          logger.error('Failed to decode FSRS model in syncFSRSModels: ' + err);
         }
       }
 
@@ -62,21 +62,21 @@ const functions = {
           const dataIdsRaw = JSON.parse(req.body.dataIds);
           dataIds = Array.isArray(dataIdsRaw)
             ? dataIdsRaw.map(
-                (id: any) => new mongoose.Types.ObjectId(String(id)),
+                (id: any) => new mongoose.Types.ObjectId(String(id))
               )
             : [];
         } catch (err: unknown) {
           logger.error(
-            "Failed to decode data IDs for FSRS models in syncFSRSModels: " +
-              err,
+            'Failed to decode data IDs for FSRS models in syncFSRSModels: ' +
+              err
           );
         }
       }
 
       const conditions = {};
-      conditions["user"] = userId;
+      conditions['user'] = userId;
       if (dataIds.length > 0) {
-        conditions["dataId"] = { $in: dataIds };
+        conditions['dataId'] = { $in: dataIds };
       }
 
       const dbFSRSModels = await FSRSModel.find(conditions).lean();
@@ -84,7 +84,7 @@ const functions = {
       const fsrsModelsToUpdateOnServer: FSRSDocument[] = [];
       const fsrsModelsToSendToClient: FlattenMaps<FSRSDocument>[] = [];
       const clientModelsMap = new Map(
-        fsrsModels.map((m) => [`${m.dataId}_${m.dataType}`, m]),
+        fsrsModels.map((m) => [`${m.dataId}_${m.dataType}`, m])
       );
 
       for (let dbFSRSModel of dbFSRSModels) {
@@ -94,11 +94,11 @@ const functions = {
         if (fsrsModel) {
           const dbFSRSModelLastReviewDate = DateTime.fromJSDate(
             dbFSRSModel.reviewLog.review,
-            { zone: "utc" },
+            { zone: 'utc' }
           );
           const fsrsModelLastReviewDate = DateTime.fromJSDate(
             fsrsModel.reviewLog.review,
-            { zone: "utc" },
+            { zone: 'utc' }
           );
 
           // Client has newer version, update on server
@@ -147,7 +147,7 @@ const functions = {
 
       if (serverOperations.length === 0) {
         return res.status(SyncFSRSModelsStatus.Synched).send({
-          message: "FSRS models synchronized.",
+          message: 'FSRS models synchronized.',
           fsrsModels: JSON.parse(JSON.stringify(fsrsModelsToSendToClient)),
           insertedCount: 0,
           updatedCount: 0,
@@ -156,7 +156,7 @@ const functions = {
 
       const result = await FSRSModel.bulkWrite(serverOperations);
       return res.status(SyncFSRSModelsStatus.Synched).send({
-        message: "FSRS models synchronized.",
+        message: 'FSRS models synchronized.',
         fsrsModels: JSON.parse(JSON.stringify(fsrsModelsToSendToClient)),
         insertedCount: result.insertedCount,
         updatedCount: result.modifiedCount,
@@ -164,7 +164,7 @@ const functions = {
     } catch (err: unknown) {
       logger.error(err);
       return res.status(SyncFSRSModelsStatus.InternalError).send({
-        message: "FSRS model sync failed: an error occurred.",
+        message: 'FSRS model sync failed: an error occurred.',
       });
     }
   },
@@ -172,7 +172,7 @@ const functions = {
   // For backwards compatibility, this funtion now just sends back a generic response.
   syncEbisuModels: function (_: Express.AuthenticatedRequest, res: Response) {
     res.status(200).send({
-      message: "Ebisu models synchronized.",
+      message: 'Ebisu models synchronized.',
       ebisuModels: [],
       insertedCount: 0,
       updatedCount: 0,
@@ -184,32 +184,32 @@ const functions = {
       {},
       { activityUserAnswerTimestamps: string }
     >,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.activityUserAnswerTimestamps) {
       return res
         .status(CheckActivityUserAnswersLoggingStatus.MissingArguments)
         .send({
           message:
-            "Activity user answer logging check failed: missing argument.",
+            'Activity user answer logging check failed: missing argument.',
         });
     }
     const userId = new mongoose.Types.ObjectId(req.token._id);
     let activityUserAnswerTimestampsRaw: any[];
     try {
       activityUserAnswerTimestampsRaw = JSON.parse(
-        req.body.activityUserAnswerTimestamps,
+        req.body.activityUserAnswerTimestamps
       );
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res
         .status(CheckActivityUserAnswersLoggingStatus.MissingArguments)
         .send({
           message:
-            "Activity user answer logging check failed: missing argument.",
+            'Activity user answer logging check failed: missing argument.',
         });
     }
     const activityUserAnswerTimestamps = Array.isArray(
-      activityUserAnswerTimestampsRaw,
+      activityUserAnswerTimestampsRaw
     )
       ? activityUserAnswerTimestampsRaw.map((elem) => DateTime.fromISO(elem))
       : [];
@@ -219,14 +219,14 @@ const functions = {
           user: userId,
           timestamp: { $in: activityUserAnswerTimestamps },
         },
-        "timestamp -_id",
+        'timestamp -_id'
       )
         .lean()
         .exec();
       if (result) {
         // Use Set rather than array for O(1) lookups - Set uses hash table internally when using has() method.
         const foundTimestampsSet = new Set(
-          result.map((elem) => DateTime.fromJSDate(elem.timestamp).toISO()),
+          result.map((elem) => DateTime.fromJSDate(elem.timestamp).toISO())
         );
         const nonLoggedAnswerTimestamps = activityUserAnswerTimestamps
           .map((dt) => dt.toISO())
@@ -236,7 +236,7 @@ const functions = {
           return res
             .status(CheckActivityUserAnswersLoggingStatus.Checked)
             .json({
-              message: "Activity user answers logging checked by timestamp.",
+              message: 'Activity user answers logging checked by timestamp.',
               timestamps: JSON.parse(JSON.stringify(nonLoggedAnswerTimestamps)),
             });
         } else {
@@ -244,13 +244,13 @@ const functions = {
             .status(CheckActivityUserAnswersLoggingStatus.Checked)
             .json({
               message:
-                "Activity user answers logging checked by timestamp: all are logged.",
+                'Activity user answers logging checked by timestamp: all are logged.',
               timestamps: [],
             });
         }
       } else {
         return res.status(CheckActivityUserAnswersLoggingStatus.Checked).json({
-          message: "Activity user answers logging checked by timestamp.",
+          message: 'Activity user answers logging checked by timestamp.',
           timestamps: JSON.parse(JSON.stringify(activityUserAnswerTimestamps)),
         });
       }
@@ -260,7 +260,7 @@ const functions = {
         .status(CheckActivityUserAnswersLoggingStatus.InternalError)
         .send({
           message:
-            "Activity user answers logging check by timestamp failed: an error occurred (ERR1).",
+            'Activity user answers logging check by timestamp failed: an error occurred (ERR1).',
         });
     }
   },
@@ -270,11 +270,11 @@ const functions = {
       {},
       { activityUserAnswers: string; activityIds: string }
     >,
-    res: Response,
+    res: Response
   ) {
     if (!req.body.activityUserAnswers || !req.body.activityIds) {
       return res.status(SyncActivityUserAnswersStatus.MissingArguments).send({
-        message: "Activity user answers sync failed: missing argument.",
+        message: 'Activity user answers sync failed: missing argument.',
       });
     }
     const userId = new mongoose.Types.ObjectId(req.token._id);
@@ -282,10 +282,10 @@ const functions = {
 
     try {
       activityIdsRaw = JSON.parse(req.body.activityIds);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(SyncActivityUserAnswersStatus.MissingArguments).send({
         message:
-          "Activity user answers sync failed: missing argument (invalid json).",
+          'Activity user answers sync failed: missing argument (invalid json).',
       });
     }
 
@@ -298,14 +298,14 @@ const functions = {
     let activityUserAnswersRaw: any;
     try {
       activityUserAnswersRaw = JSON.parse(req.body.activityUserAnswers);
-    } catch (err: unknown) {
+    } catch (_: unknown) {
       return res.status(SyncActivityUserAnswersStatus.MissingArguments).send({
         message:
-          "Activity user answers sync failed: missing argument (invalid json).",
+          'Activity user answers sync failed: missing argument (invalid json).',
       });
     }
     const activityUserAnswersArray: string[] = Array.isArray(
-      activityUserAnswersRaw,
+      activityUserAnswersRaw
     )
       ? activityUserAnswersRaw
       : [];
@@ -314,8 +314,8 @@ const functions = {
       existingActivityAnswersDictionary.set(
         key,
         DateTime.fromISO(value, {
-          zone: "utc",
-        }),
+          zone: 'utc',
+        })
       );
     }
     try {
@@ -327,22 +327,22 @@ const functions = {
         },
         { $sort: { timestamp: -1 } },
         // Get the latest answer for each unique activity
-        { $group: { _id: "$activity", latest: { $first: "$$ROOT" } } },
+        { $group: { _id: '$activity', latest: { $first: '$$ROOT' } } },
         // exclude _id from root object and project each found activity answer to field name "activityAnswer"
-        { $project: { _id: 0, activityAnswer: "$latest" } },
+        { $project: { _id: 0, activityAnswer: '$latest' } },
         // Flatten result array
-        { $unwind: "$activityAnswer" },
+        { $unwind: '$activityAnswer' },
         {
           $replaceRoot: {
-            newRoot: "$activityAnswer",
+            newRoot: '$activityAnswer',
           },
         },
         // CRITICAL: exclude user field as the client cannot decode it unless it is a map containing the username and role
-        { $unset: ["user"] },
+        { $unset: ['user'] },
       ]).exec();
       if (!result || result.length === 0) {
         return res.status(SyncActivityUserAnswersStatus.Synched).send({
-          message: "Activity user answers are already synchronized.",
+          message: 'Activity user answers are already synchronized.',
           activityUserAnswers: [],
         });
       } else {
@@ -350,17 +350,17 @@ const functions = {
         for (let activityAnswer of result) {
           if (
             existingActivityAnswersDictionary.has(
-              activityAnswer.activity.toString(),
+              activityAnswer.activity.toString()
             )
           ) {
             let activityAnswerTimestamp = DateTime.fromJSDate(
               activityAnswer.timestamp,
-              { zone: "utc" },
+              { zone: 'utc' }
             );
             if (
               activityAnswerTimestamp >
               existingActivityAnswersDictionary.get(
-                activityAnswer.activity.toString(),
+                activityAnswer.activity.toString()
               )
             ) {
               filteredResult.push(activityAnswer);
@@ -370,14 +370,14 @@ const functions = {
           }
         }
         return res.status(SyncActivityUserAnswersStatus.Synched).json({
-          message: "Activity user answers synched.",
+          message: 'Activity user answers synched.',
           activityUserAnswers: JSON.parse(JSON.stringify(filteredResult)),
         });
       }
     } catch (err: unknown) {
       logger.error(err);
       return res.status(SyncActivityUserAnswersStatus.InternalError).send({
-        message: "Activity answers sync failed: an error occurred (error).",
+        message: 'Activity answers sync failed: an error occurred (error).',
       });
     }
   },

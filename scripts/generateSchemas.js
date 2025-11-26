@@ -139,7 +139,24 @@ try {
           definitions: fileSchemas,
         };
 
-        fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+        let jsonOutput = JSON.stringify(output, null, 2);
+
+        // FIX: replace mongoose.Types.ObjectId with string type
+        // This fixes "Could not resolve pointer: /definitions/Types.ObjectId"
+        jsonOutput = jsonOutput.replace(
+          /"\$ref":\s*"#\/definitions\/Types\.ObjectId"/g,
+          '"type": "string"'
+        );
+
+        // FIX: rewrite local definitions refs to swagger components refs
+        // This fixes "Could not resolve pointer: /definitions/CodeBlock" when merged into swagger
+        // e.g., "#/definitions/CodeBlock" -> "#/components/schemas/CodeBlock"
+        jsonOutput = jsonOutput.replace(
+          /"\$ref":\s*"#\/definitions\/([^"]+)"/g,
+          '"$ref": "#/components/schemas/$1"'
+        );
+
+        fs.writeFileSync(outputPath, jsonOutput);
         generatedFiles.push(`${fileName}.json`);
         console.log(`   💾 Saved to schemas/${fileName}.json`);
       }

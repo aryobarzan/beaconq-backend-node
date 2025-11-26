@@ -21,7 +21,7 @@
           "type": "string"
         },
         "trialQuiz": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "restrictSubmissionInitially": {
           "type": "boolean"
@@ -35,13 +35,13 @@
         "sessions": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/CourseSession"
+            "$ref": "#/components/schemas/CourseSession"
           }
         },
         "beaconResources": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/BeaconResource"
+            "$ref": "#/components/schemas/BeaconResource"
           }
         },
         "version": {

@@ -6,7 +6,7 @@
       "type": "object",
       "properties": {
         "_id": {
-          "$ref": "#/definitions/Types.ObjectId"
+          "type": "string"
         },
         "title": {
           "type": "string"
@@ -14,7 +14,7 @@
         "topics": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Types.ObjectId"
+            "type": "string"
           }
         },
         "currentTopicIndex": {
@@ -31,13 +31,13 @@
         "scheduledQuizzes": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ScheduledQuiz"
+            "$ref": "#/components/schemas/ScheduledQuiz"
           }
         },
         "beaconResources": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/BeaconResource"
+            "$ref": "#/components/schemas/BeaconResource"
           }
         }
       },
