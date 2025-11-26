@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "playContext.json",
+  "definitions": {
+    "PlayContext": {
+      "type": "object",
+      "properties": {
+        "contextId": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "playType": {
+          "type": "string",
+          "enum": [
+            "trialQuiz",
+            "scheduledQuiz",
+            "review",
+            "challengeReview",
+            "test",
+            "unlock"
+          ]
+        },
+        "descriptor": {
+          "type": "string"
+        },
+        "activities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "course": {
+          "type": "string"
+        },
+        "courseSessions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "logAnswers": {
+          "type": "boolean"
+        },
+        "logActivityUserInteractions": {
+          "type": "boolean"
+        },
+        "logActivityFeedbackViews": {
+          "type": "boolean"
+        },
+        "additionalActivities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reviewOptions": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "patron": {
+          "type": "string"
+        },
+        "userSelfPredictedPerformance": {
+          "type": "number"
+        },
+        "userEstimatedRetrievability": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "contextId",
+        "user",
+        "playType",
+        "activities",
+        "logAnswers",
+        "logActivityUserInteractions",
+        "logActivityFeedbackViews",
+        "additionalActivities"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

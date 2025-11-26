@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scheduledQuizUserStart.json",
+  "definitions": {
+    "ScheduledQuizUserStart": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "scheduledQuiz",
+        "timestamp",
+        "serverTimestamp"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

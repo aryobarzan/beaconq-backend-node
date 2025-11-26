@@ -2,10 +2,18 @@
   "name": "project-elpis-server",
   "version": "3.0.0",
   "description": "Back-end server for Project Elpis ('BEACON Q')",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node -r dotenv/config server",
-    "dev": "cross-env NODE_ENV=development nodemon -r dotenv/config server"
+    "generate:schemas": "node scripts/generateSchemas.js",
+    "predev": "npm run generate:schemas",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "build": "tsc -p .",
+    "build:watch": "tsc -p . --watch",
+    "dev": "ts-node-dev --respawn --transpile-only server.ts",
+    "start": "node --env-file=.env dist/server.js",
+    "typecheck": "tsc -p . --noEmit",
+    "prepare": "husky"
   },
   "author": "Aryobarzan Atashpendar",
   "license": "Apache-2.0",
@@ -22,7 +30,7 @@
     "jsonwebtoken": "^9.0.0",
     "jwt-simple": "^0.5.6",
     "luxon": "^3.7.2",
-    "mongoose": "^8.19.4",
+    "mongoose": "^8.20.1",
     "multer": "^2.0.2",
     "node-schedule": "^2.1.1",
     "nodemon": "^3.1.11",
@@ -30,17 +38,44 @@
     "passport-jwt": "^4.0.1",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0",
-    "rotating-file-stream": "^3.2.7"
+    "rotating-file-stream": "^3.2.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/body-parser": "^1.19.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/luxon": "^3.7.1",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.1",
+    "@types/node-schedule": "^2.1.8",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "pino-pretty": "^13.1.2",
-    "prettier": "3.6.2"
+    "prettier": "3.6.2",
+    "ts-json-schema-generator": "^2.4.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
   },
   "overrides": {
     "jsonwebtoken": {
       "jwa": "^2.0.1"
     }
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

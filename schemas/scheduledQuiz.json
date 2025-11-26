@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scheduledQuiz.json",
+  "definitions": {
+    "ScheduledQuiz": {
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string"
+        },
+        "quiz": {
+          "type": "string"
+        },
+        "startDateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endDateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "playDuration": {
+          "type": "number"
+        },
+        "assessmentType": {
+          "type": "string"
+        },
+        "fixedDifficulty": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "_id",
+        "quiz",
+        "startDateTime",
+        "endDateTime",
+        "playDuration",
+        "assessmentType"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

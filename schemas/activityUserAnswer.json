@@ -1,0 +1,511 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "activityUserAnswer.json",
+  "definitions": {
+    "ActivityComputedDifficultyData": {
+      "type": "object",
+      "properties": {
+        "activityHardness": {
+          "type": "number"
+        },
+        "activityHardnessWeight": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "activityRecallProbability": {
+          "type": "number"
+        },
+        "relatedActivitiesCount": {
+          "type": "number"
+        },
+        "relatedActivitiesAverageRecallProbability": {
+          "type": "number"
+        },
+        "relatedActivitiesAverageDifficulty": {
+          "type": "number"
+        },
+        "courseMastery": {
+          "type": "number"
+        },
+        "difficultyAlgorithmVersionCode": {
+          "type": "number"
+        },
+        "activityComponentWeight": {
+          "type": "number"
+        },
+        "relatedActivitiesComponentWeight": {
+          "type": "number"
+        },
+        "coreComponentWeight": {
+          "type": "number"
+        },
+        "computedDifficulty": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "activityHardness",
+        "activityHardnessWeight",
+        "activityDifficulty",
+        "activityRecallProbability",
+        "relatedActivitiesCount",
+        "relatedActivitiesAverageRecallProbability",
+        "relatedActivitiesAverageDifficulty",
+        "difficultyAlgorithmVersionCode",
+        "activityComponentWeight",
+        "relatedActivitiesComponentWeight",
+        "coreComponentWeight",
+        "computedDifficulty"
+      ],
+      "additionalProperties": false
+    },
+    "ActivityUserAnswer": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "courseContext": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "difficulty": {
+          "type": "number"
+        },
+        "computedDifficultyData": {
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
+        },
+        "activityAnswerType": {
+          "type": "string"
+        },
+        "activityPlayTime": {
+          "type": "number"
+        },
+        "isCorrect": {
+          "type": "boolean"
+        },
+        "difficultyModifier": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "patron": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "activity",
+        "activityVersion",
+        "activityDifficulty",
+        "difficulty",
+        "activityAnswerType",
+        "activityPlayTime",
+        "isCorrect",
+        "timestamp",
+        "serverTimestamp"
+      ],
+      "additionalProperties": false
+    },
+    "ChoiceActivityUserAnswer": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "courseContext": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "difficulty": {
+          "type": "number"
+        },
+        "computedDifficultyData": {
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
+        },
+        "activityAnswerType": {
+          "type": "string"
+        },
+        "activityPlayTime": {
+          "type": "number"
+        },
+        "isCorrect": {
+          "type": "boolean"
+        },
+        "difficultyModifier": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "patron": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "answers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "answer": {
+                "type": "string"
+              },
+              "evaluation": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "answer",
+              "evaluation"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "answerOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isCorrectOrder": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "activity",
+        "activityAnswerType",
+        "activityDifficulty",
+        "activityPlayTime",
+        "activityVersion",
+        "answerOrder",
+        "answers",
+        "difficulty",
+        "isCorrect",
+        "isCorrectOrder",
+        "serverTimestamp",
+        "timestamp",
+        "user"
+      ],
+      "additionalProperties": false
+    },
+    "RecallActivityUserAnswer": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "courseContext": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "difficulty": {
+          "type": "number"
+        },
+        "computedDifficultyData": {
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
+        },
+        "activityAnswerType": {
+          "type": "string"
+        },
+        "activityPlayTime": {
+          "type": "number"
+        },
+        "isCorrect": {
+          "type": "boolean"
+        },
+        "difficultyModifier": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "patron": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "answers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "answer": {
+                "type": "string"
+              },
+              "evaluation": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "answer",
+              "evaluation"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "answerOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isCorrectOrder": {
+          "type": "boolean"
+        },
+        "levenshteinThreshold": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "activity",
+        "activityAnswerType",
+        "activityDifficulty",
+        "activityPlayTime",
+        "activityVersion",
+        "answerOrder",
+        "answers",
+        "difficulty",
+        "isCorrect",
+        "isCorrectOrder",
+        "serverTimestamp",
+        "timestamp",
+        "user"
+      ],
+      "additionalProperties": false
+    },
+    "DartBlockActivityUserAnswer": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "courseContext": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "difficulty": {
+          "type": "number"
+        },
+        "computedDifficultyData": {
+          "$ref": "#/components/schemas/ActivityComputedDifficultyData"
+        },
+        "activityAnswerType": {
+          "type": "string"
+        },
+        "activityPlayTime": {
+          "type": "number"
+        },
+        "isCorrect": {
+          "type": "boolean"
+        },
+        "difficultyModifier": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "patron": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "userSolution": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "evaluationResult": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "dartBlockInteractions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "size": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "size"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "activity",
+        "activityAnswerType",
+        "activityDifficulty",
+        "activityPlayTime",
+        "activityVersion",
+        "difficulty",
+        "evaluationResult",
+        "isCorrect",
+        "serverTimestamp",
+        "timestamp",
+        "user",
+        "userSolution"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

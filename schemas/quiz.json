@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "quiz.json",
+  "definitions": {
+    "Quiz": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "activities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "version": {
+          "type": "number"
+        },
+        "useCustomSurveyQuestions": {
+          "type": "boolean"
+        },
+        "excludeDefaultSurveyQuestions": {
+          "type": "boolean"
+        },
+        "surveyQuestions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "postFeedback": {
+          "type": "string"
+        },
+        "postFeedbackBeaconResource": {
+          "$ref": "#/components/schemas/BeaconResource"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "title",
+        "activities",
+        "version",
+        "useCustomSurveyQuestions",
+        "excludeDefaultSurveyQuestions"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

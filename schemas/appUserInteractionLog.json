@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "appUserInteractionLog.json",
+  "definitions": {
+    "AppUserInteractionLog": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "clientTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "course": {
+          "type": "string"
+        },
+        "interactionType": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "clientTimestamp",
+        "interactionType"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

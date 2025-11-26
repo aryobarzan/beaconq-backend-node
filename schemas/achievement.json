@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "achievement.json",
+  "definitions": {
+    "Achievement": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "points": {
+          "type": "number"
+        },
+        "course": {
+          "type": "string"
+        },
+        "hideDescription": {
+          "type": "boolean"
+        },
+        "criteria": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "size"
+          ],
+          "additionalProperties": false
+        },
+        "author": {
+          "type": "string"
+        },
+        "version": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "points",
+        "hideDescription",
+        "criteria",
+        "author",
+        "version"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

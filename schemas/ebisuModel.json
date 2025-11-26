@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ebisuModel.json",
+  "definitions": {
+    "Ebisu": {
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "number"
+        },
+        "alpha": {
+          "type": "number"
+        },
+        "beta": {
+          "type": "number"
+        },
+        "dataType": {
+          "type": "string",
+          "enum": [
+            "activity",
+            "topic"
+          ]
+        },
+        "dataId": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "version": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "time",
+        "alpha",
+        "beta",
+        "dataType",
+        "dataId",
+        "user",
+        "version"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

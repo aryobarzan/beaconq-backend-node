@@ -2,16 +2,23 @@ services:
   app:
     environment:
       - NODE_OPTIONS=--max-old-space-size=2048
-    build: .
+      - NODE_ENV=production
+    build:
+      context: .
+      dockerfile: Dockerfile
     env_file:
       - .env
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
-      - mongo1
+      mongo1:
+        condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./log:/app/log
+      - ./log:/app/dist/log
+    networks:
+      - backend
+
   # Rely on this separate service due to Windows permissions not translating correctly to the linux context of docker.
   # Here, this initial service will set the appropriate permissions on the keyfile that the mongo nodes will depend on.
   # Note: a keyfile has been generated and set up to enable secure internal communication between the nodes themselves.
@@ -24,22 +31,26 @@ services:
       sh -c "cp /tmp/mongo-keyfile /keyfile/mongo-keyfile &&
              chown 999:999 /keyfile/mongo-keyfile &&
              chmod 400 /keyfile/mongo-keyfile"
+    restart: no
     volumes:
       - ./mongo-keyfile:/tmp/mongo-keyfile:ro
       - mongo-keyfile-volume:/keyfile
+    networks:
+      - backend
+
   # Adapted from: https://medium.com/workleap/the-only-local-mongodb-replica-set-with-docker-compose-guide-youll-ever-need-2f0b74dd8384
   mongo1: # Primary node
     image: mongo:8.2.1
     command:
       [
-        "--replSet",
-        "rs0",
-        "--bind_ip_all",
-        "--port",
-        "27017",
-        "--keyFile",
-        "/keyfile/mongo-keyfile",
-        "--quiet",
+        '--replSet',
+        'rs0',
+        '--bind_ip_all',
+        '--port',
+        '27017',
+        '--keyFile',
+        '/keyfile/mongo-keyfile',
+        '--quiet',
       ]
     ports:
       - 27017:27017
@@ -66,25 +77,29 @@ services:
       timeout: 10s
       start_period: 10s
       retries: 10
+    restart: unless-stopped
     volumes:
       - mongo1-data:/data/db
       - mongo1-config:/data/configdb
       - mongo-keyfile-volume:/keyfile
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    networks:
+      - backend
 
   mongo2:
     image: mongo:8.2.1
     command:
       [
-        "--replSet",
-        "rs0",
-        "--bind_ip_all",
-        "--port",
-        "27018",
-        "--keyFile",
-        "/keyfile/mongo-keyfile",
-        "--quiet",
+        '--replSet',
+        'rs0',
+        '--bind_ip_all',
+        '--port',
+        '27018',
+        '--keyFile',
+        '/keyfile/mongo-keyfile',
+        '--quiet',
       ]
+    restart: unless-stopped
     ports:
       - 27018:27018
     environment:
@@ -97,20 +112,23 @@ services:
       - mongo2-data:/data/db
       - mongo2-config:/data/configdb
       - mongo-keyfile-volume:/keyfile
+    networks:
+      - backend
 
   mongo3:
     image: mongo:8.2.1
     command:
       [
-        "--replSet",
-        "rs0",
-        "--bind_ip_all",
-        "--port",
-        "27019",
-        "--keyFile",
-        "/keyfile/mongo-keyfile",
-        "--quiet",
+        '--replSet',
+        'rs0',
+        '--bind_ip_all',
+        '--port',
+        '27019',
+        '--keyFile',
+        '/keyfile/mongo-keyfile',
+        '--quiet',
       ]
+    restart: unless-stopped
     ports:
       - 27019:27019
     environment:
@@ -123,6 +141,27 @@ services:
       - mongo3-data:/data/db
       - mongo3-config:/data/configdb
       - mongo-keyfile-volume:/keyfile
+    networks:
+      - backend
+  mongo-backup:
+    image: mongo:8.2.1
+    depends_on:
+      mongo1:
+        condition: service_healthy
+    environment:
+      MONGO_HOST: mongo1
+      MONGO_PORT: 27017
+      MONGO_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      BACKUP_RETENTION_DAYS: 7
+      BACKUP_INTERVAL: 86400 # 24 hours (daily)
+    volumes:
+      - ./backups:/backup
+      - ./scripts/mongoDBDockerBackup.sh:/backup.sh
+    entrypoint: /backup.sh
+    restart: unless-stopped
+    networks:
+      - backend
 
 volumes:
   mongo1-data:
@@ -132,3 +171,7 @@ volumes:
   mongo2-config:
   mongo3-config:
   mongo-keyfile-volume:
+
+networks:
+  backend:
+    driver: bridge

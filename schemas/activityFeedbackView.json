@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "activityFeedbackView.json",
+  "definitions": {
+    "ActivityFeedbackView": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "user",
+        "activity",
+        "activityVersion",
+        "activityDifficulty",
+        "timestamp"
+      ],
+      "additionalProperties": false
+    },
+    "ChoiceActivityFeedbackView": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "answer": {
+          "type": "string"
+        },
+        "feedback": {
+          "type": "string"
+        },
+        "isDistractor": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "activity",
+        "activityDifficulty",
+        "activityVersion",
+        "answer",
+        "feedback",
+        "isDistractor",
+        "timestamp",
+        "user"
+      ],
+      "additionalProperties": false
+    },
+    "DartBlockActivityFeedbackView": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "activity": {
+          "type": "string"
+        },
+        "activityVersion": {
+          "type": "number"
+        },
+        "activityDifficulty": {
+          "type": "number"
+        },
+        "playContextId": {
+          "type": "string"
+        },
+        "scheduledQuiz": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "feedbackViewType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "activity",
+        "activityDifficulty",
+        "activityVersion",
+        "feedbackViewType",
+        "timestamp",
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
