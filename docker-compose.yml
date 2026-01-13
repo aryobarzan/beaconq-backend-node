@@ -39,19 +39,10 @@ services:
       - backend
 
   # Adapted from: https://medium.com/workleap/the-only-local-mongodb-replica-set-with-docker-compose-guide-youll-ever-need-2f0b74dd8384
-  mongo1: # Primary node
+  mongo1:
+    # Primary node
     image: mongo:8.2.1
-    command:
-      [
-        '--replSet',
-        'rs0',
-        '--bind_ip_all',
-        '--port',
-        '27017',
-        '--keyFile',
-        '/keyfile/mongo-keyfile',
-        '--quiet',
-      ]
+    command: [ '--replSet', 'rs0', '--bind_ip_all', '--port', '27017', '--keyFile', '/keyfile/mongo-keyfile', '--quiet' ]
     ports:
       - 27017:27017
     extra_hosts:
@@ -88,17 +79,7 @@ services:
 
   mongo2:
     image: mongo:8.2.1
-    command:
-      [
-        '--replSet',
-        'rs0',
-        '--bind_ip_all',
-        '--port',
-        '27018',
-        '--keyFile',
-        '/keyfile/mongo-keyfile',
-        '--quiet',
-      ]
+    command: [ '--replSet', 'rs0', '--bind_ip_all', '--port', '27018', '--keyFile', '/keyfile/mongo-keyfile', '--quiet' ]
     restart: unless-stopped
     ports:
       - 27018:27018
@@ -117,17 +98,7 @@ services:
 
   mongo3:
     image: mongo:8.2.1
-    command:
-      [
-        '--replSet',
-        'rs0',
-        '--bind_ip_all',
-        '--port',
-        '27019',
-        '--keyFile',
-        '/keyfile/mongo-keyfile',
-        '--quiet',
-      ]
+    command: [ '--replSet', 'rs0', '--bind_ip_all', '--port', '27019', '--keyFile', '/keyfile/mongo-keyfile', '--quiet' ]
     restart: unless-stopped
     ports:
       - 27019:27019
@@ -143,11 +114,26 @@ services:
       - mongo-keyfile-volume:/keyfile
     networks:
       - backend
+
+  backup-script-init:
+    image: alpine:latest
+    command: >
+      sh -c "cp /tmp/backup.sh /scripts/backup.sh &&
+             chmod +x /scripts/backup.sh"
+    restart: no
+    volumes:
+      - ./scripts/mongoDBDockerBackup.sh:/tmp/backup.sh:ro
+      - backup-script-volume:/scripts
+    networks:
+      - backend
+
   mongo-backup:
     image: mongo:8.2.1
     depends_on:
       mongo1:
         condition: service_healthy
+      backup-script-init:
+        condition: service_completed_successfully
     environment:
       MONGO_HOST: mongo1
       MONGO_PORT: 27017
@@ -157,8 +143,8 @@ services:
       BACKUP_INTERVAL: 86400 # 24 hours (daily)
     volumes:
       - ./backups:/backup
-      - ./scripts/mongoDBDockerBackup.sh:/backup.sh
-    entrypoint: /backup.sh
+      - backup-script-volume:/scripts
+    entrypoint: /scripts/backup.sh
     restart: unless-stopped
     networks:
       - backend
@@ -171,6 +157,8 @@ volumes:
   mongo2-config:
   mongo3-config:
   mongo-keyfile-volume:
+  backup-script-volume:
+
 
 networks:
   backend:

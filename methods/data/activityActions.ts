@@ -5,6 +5,7 @@ import ModelHelper from '../../middleware/modelHelper';
 import mongoose from 'mongoose';
 import logger from '../../middleware/logger';
 import { Response } from 'express';
+import { UserRole, PermissionLevel } from '../../types/roles';
 
 async function archiveActivity(
   activity: ActivityDocument,

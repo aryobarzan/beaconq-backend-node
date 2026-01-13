@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { UserRole } from '../types/roles';
 
 enum LogAppFeedbackStatus {
   Logged = 200,

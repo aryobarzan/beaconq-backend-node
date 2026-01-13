@@ -8,6 +8,7 @@ import {
 } from '../../models/courseRegistration';
 import ModelHelper from '../../middleware/modelHelper';
 import firebaseHelper from '../../middleware/firebaseHelper';
+import { UserRole, PermissionLevel } from '../../types/roles';
 import mongoose from 'mongoose';
 
 // Possible status codes
