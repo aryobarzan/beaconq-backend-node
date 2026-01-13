@@ -516,7 +516,7 @@ const functions = {
       ) {
         return res.status(GetRegisteredCoursesStatus.Retrieved).send({
           message: 'Registered courses downloaded.',
-          courses: courses.map((c) => c.toJSON()),
+          courses: courses,
         });
       }
 
@@ -531,7 +531,7 @@ const functions = {
       populatedCourses = populatedCourses as CourseDocument[];
       return res.status(GetRegisteredCoursesStatus.Retrieved).send({
         message: 'Registered courses downloaded.',
-        courses: populatedCourses.map((c) => c.toJSON()),
+        courses: populatedCourses,
       });
     } catch (err: unknown) {
       logger.error(err);
