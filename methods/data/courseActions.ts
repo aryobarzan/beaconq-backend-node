@@ -246,8 +246,8 @@ const functions = {
       }
       return res.status(GetCoursesStatus.Retrieved).send({
         courses: Array.isArray(populatedCourses)
-          ? populatedCourses.map((c) => c.toJSON())
-          : populatedCourses.toJSON(),
+          ? populatedCourses
+          : [populatedCourses],
       });
     } catch (err: unknown) {
       logger.error(err);

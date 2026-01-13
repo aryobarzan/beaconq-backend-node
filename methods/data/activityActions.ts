@@ -216,7 +216,7 @@ const functions = {
           });
         }
         return res.status(GetActivitiesStatus.Retrieved).send({
-          activities: populatedActivities.map((a) => a.toJSON()),
+          activities: populatedActivities,
         });
       }
     } catch (err: unknown) {
