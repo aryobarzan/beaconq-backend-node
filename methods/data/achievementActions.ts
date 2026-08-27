@@ -306,7 +306,7 @@ const functions = {
         message: 'No user achievements indicated.',
       });
     }
-    let receivedUserAchievementsRaw = [];
+    let receivedUserAchievementsRaw: any[];
     try {
       receivedUserAchievementsRaw = JSON.parse(req.body.userAchievements);
     } catch (_: unknown) {

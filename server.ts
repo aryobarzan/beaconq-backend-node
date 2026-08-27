@@ -14,7 +14,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import * as requestLogger from './middleware/requestLogger';
 import logger from './middleware/logger';
-import firebaseAdmin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin';
 import firebaseHelper from './middleware/firebaseHelper';
 import { Server } from 'http';
 import { swaggerSpec } from './swagger';
@@ -57,8 +57,8 @@ async function initFirebase() {
   try {
     // Load service account JSON file
     const serviceAccount = JSON.parse(fs.readFileSync(credPath, 'utf8'));
-    firebaseAdmin.initializeApp({
-      credential: firebaseAdmin.credential.cert(serviceAccount),
+    initializeApp({
+      credential: cert(serviceAccount),
     });
     logger.info('Firebase admin initialized');
   } catch (err: unknown) {

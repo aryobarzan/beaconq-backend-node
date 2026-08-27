@@ -1,4 +1,4 @@
-import firebaseAdmin from 'firebase-admin';
+import { getMessaging } from 'firebase-admin/messaging';
 import { DateTime } from 'luxon';
 import { CourseDocument, CourseModel } from '../models/course';
 import logger from './logger';
@@ -111,7 +111,7 @@ async function scheduleJobsForCourseScheduledQuizzes(course: CourseDocument) {
             };
 
             try {
-              const response = await firebaseAdmin.messaging().send(message);
+              const response = await getMessaging().send(message);
               logger.info(`Successfully sent push notification: ${response}`);
             } catch (err: unknown) {
               logger.error(`Error sending message: ${err}`);

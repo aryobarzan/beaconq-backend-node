@@ -1,14 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",
+    // module/moduleResolution nodenext: the legacy "node"/"node10" resolution is deprecated in TS 6
+    // and removed in TS 7 (native compiler). nodenext is also the only option both TS 6 and
+    // ts-json-schema-generator's bundled TS 5.9 accept (it rejects ignoreDeprecations: "6.0").
+    "module": "nodenext",
     "lib": ["ES2020"],
     "outDir": "dist",
     "rootDir": ".",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
 
     // Type Checking - Progressive strictness (enable gradually)
     "noImplicitAny": false,

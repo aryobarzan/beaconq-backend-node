@@ -162,7 +162,9 @@ let stream: rfs.RotatingFileStream | null;
 try {
   stream = rfs.createStream(LOG_FILENAME, {
     size: isValidSize(ROTATE_SIZE) ? ROTATE_SIZE : '10M',
-    interval: isValidInterval(ROTATE_INTERVAL) ? ROTATE_INTERVAL : '7d',
+    interval: (isValidInterval(ROTATE_INTERVAL)
+      ? ROTATE_INTERVAL
+      : '7d') as string,
     path: LOG_DIR,
     compress: ROTATE_COMPRESS,
     maxFiles: isNaN(maxFiles) || maxFiles <= 0 ? 10 : maxFiles,
