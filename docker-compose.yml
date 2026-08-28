@@ -1,5 +1,8 @@
 services:
   app:
+    # Explicit tag so the auto-deploy script can keep the previous build as
+    # beaconq-app:previous and retag it back if a new build fails its health check.
+    image: beaconq-app:current
     environment:
       - NODE_OPTIONS=--max-old-space-size=2048
       - NODE_ENV=production
