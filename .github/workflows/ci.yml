@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, production]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+# A newer push to the same branch supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # `npm ci` runs the `prepare` script, which installs husky's git hooks.
+  # Pointless in CI, and it fails outside a working tree with hooks enabled.
+  HUSKY: 0
+
+jobs:
+  lint-and-build:
+    name: Lint, typecheck, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Matches `node:26-alpine` in the Dockerfile. Bump both together.
+          node-version: '26'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # swagger.ts reads the generated schemas, and the Dockerfile generates
+      # them before `npm run build`, so CI has to do the same or the build
+      # fails on a clean checkout.
+      - name: Generate schemas
+        run: npm run generate:schemas
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  docker-build:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    # Only worth the minutes once the code itself is known good.
+    needs: lint-and-build
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # The Dockerfile COPYs `mongo-init.js` and `beaconQ_config/`, both of
+      # which are gitignored and therefore absent from a clean checkout. Real
+      # values live only on the server; these placeholders exist so the build
+      # can be exercised. They are never published — the image is discarded
+      # with the runner.
+      - name: Create placeholders for gitignored build inputs
+        run: |
+          [ -f mongo-init.js ] || cp mongo-init.js.example mongo-init.js
+          mkdir -p beaconQ_config
+          [ -n "$(ls -A beaconQ_config)" ] || echo '{}' > beaconQ_config/placeholder.json
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Verifies the multi-stage build end to end: npm ci, schema generation
+      # and tsc all run inside the image exactly as they will on the server.
+      # Nothing is pushed anywhere.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
