@@ -39,6 +39,15 @@ services:
       - backend
 
   # Adapted from: https://medium.com/workleap/the-only-local-mongodb-replica-set-with-docker-compose-guide-youll-ever-need-2f0b74dd8384
+  #
+  # The replica set advertises its members by container name, so it is reachable
+  # only from inside the `backend` network. Nothing outside Docker needs to reach
+  # MongoDB in production, and not publishing the ports keeps the database off the
+  # host's network interface.
+  #
+  # For local development, `docker-compose.override.yml` re-publishes the ports and
+  # re-advertises the members as host.docker.internal so tools on the host (mongosh,
+  # MongoDB Compass) can connect. Compose merges it automatically; it is gitignored.
   mongo1: # Primary node
     image: mongo:8.2.1
     command:
@@ -52,10 +61,6 @@ services:
         '/keyfile/mongo-keyfile',
         '--quiet',
       ]
-    ports:
-      - 27017:27017
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - keyfile-init
     environment:
@@ -64,15 +69,13 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
-      # mongo will advertise itself using this name
-      MONGODB_ADVERTISED_HOSTNAME: host.docker.internal
     healthcheck:
       # Reduced frequency to avoid frequent auth/connect chattiness in the server logs.
       # The healthcheck still verifies replica set initialization and authentication,
       # but runs less often to reduce ACCESS/NETWORK logging from repeated short-lived
       # connections.
       test: >
-        sh -c "echo \"try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'host.docker.internal:27017',priority:1},{_id:1,host:'host.docker.internal:27018',priority:0.5},{_id:2,host:'host.docker.internal:27019',priority:0.5}]}) }\" | mongosh --host mongo1 --port 27017 -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase admin"
+        sh -c "echo \"try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo1:27017',priority:1},{_id:1,host:'mongo2:27018',priority:0.5},{_id:2,host:'mongo3:27019',priority:0.5}]}) }\" | mongosh --host mongo1 --port 27017 -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase admin"
       interval: 30s
       timeout: 10s
       start_period: 10s
@@ -100,12 +103,6 @@ services:
         '--quiet',
       ]
     restart: unless-stopped
-    ports:
-      - 27018:27018
-    environment:
-      MONGODB_ADVERTISED_HOSTNAME: host.docker.internal
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - keyfile-init
     volumes:
@@ -129,12 +126,6 @@ services:
         '--quiet',
       ]
     restart: unless-stopped
-    ports:
-      - 27019:27019
-    environment:
-      MONGODB_ADVERTISED_HOSTNAME: host.docker.internal
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - keyfile-init
     volumes:
