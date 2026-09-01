@@ -13,6 +13,7 @@ import path from 'path';
 import os from 'os';
 // pino-http middleware to attach req/res info and measure latency
 import { HttpLogger, pinoHttp } from 'pino-http';
+import { ADMIN_PASSWORD_HEADER } from './permissionHelper';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -186,11 +187,26 @@ try {
 
 // Configure pino options
 
+// Redacted unconditionally, not only when PINO_REDACT is set. These carry
+// credentials, and the log files are rotated to disk where they may be read,
+// copied or shipped elsewhere later; a logger that is only safe when an
+// environment variable happens to be set is not safe.
+const DEFAULT_REDACT_PATHS = [
+  'req.headers.authorization',
+  'req.headers.cookie',
+  `req.headers["${ADMIN_PASSWORD_HEADER}"]`,
+  'res.headers["set-cookie"]',
+];
+
+// PINO_REDACT adds further paths; it can no longer remove the defaults.
+const EXTRA_REDACT_PATHS = (process.env.PINO_REDACT || '')
+  .split(',')
+  .map((path) => path.trim())
+  .filter((path) => path.length > 0);
+
 const pinoOptions: pino.LoggerOptions = {
   level: LOG_LEVEL,
-  redact: process.env.PINO_REDACT
-    ? process.env.PINO_REDACT.split(',')
-    : undefined,
+  redact: [...DEFAULT_REDACT_PATHS, ...EXTRA_REDACT_PATHS],
   base: { pid: process.pid, hostname: os.hostname() }, // keep identifying base fields
 };
 

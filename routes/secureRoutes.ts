@@ -1,4 +1,5 @@
 import express from 'express';
+import { adminLimiter } from '../middleware/rateLimiters';
 import courseAnnouncementActions from '../methods/data/courseAnnouncementActions';
 import courseActions from '../methods/data/courseActions';
 import topicActions from '../methods/data/topicActions';
@@ -1141,12 +1142,15 @@ router.post(
 // Admin Routes
 // ============================================================
 
-router.get(
-  '/admin/authenticate/:adminPassword',
-  adminActions.authenticateAdmin
+// The admin password travels in the `x-admin-password` header, never in the
+// URL — a path segment ends up in the request log and in nginx's access log.
+router.get('/admin/authenticate', adminLimiter, adminActions.authenticateAdmin);
+router.get('/admin/users', adminLimiter, adminActions.getUsers);
+router.post(
+  '/admin/changeUserPassword',
+  adminLimiter,
+  adminActions.changeUserPassword
 );
-router.get('/admin/users/:adminPassword', adminActions.getUsers);
-router.post('/admin/changeUserPassword', adminActions.changeUserPassword);
 
 // ============================================================
 // Achievements Routes

@@ -1,4 +1,13 @@
 // server.js: server initialization, including database connection (MongoDB) and Firebase Admin
+
+// Side-effect import: types/roles.ts assigns `globalThis.UserRole` and
+// `globalThis.PermissionLevel`. The method/route modules use those names
+// unqualified inside their request handlers, so this must run before any
+// handler fires — hence the first import, ahead of ./routes/routes.
+// Without it every role/permission check throws `ReferenceError` at request
+// time (the enums used to live in an ambient-only `types/roles.d.ts`, which
+// emitted no runtime value).
+import './types/roles';
 import path from 'path';
 global.appRoot = path.resolve(__dirname);
 
@@ -159,8 +168,26 @@ async function main() {
   }
   const app = express();
 
-  if (process.env.TRUST_PROXY === 'true') {
-    app.set('trust proxy', true);
+  // Number of reverse proxies in front of this app. Behind a single nginx, this
+  // is 1: Express then takes the client address from the last hop it does not
+  // trust, which is the one nginx reports.
+  //
+  // `true` must not be used here. It makes Express take the LEFTMOST entry of
+  // X-Forwarded-For, which any client can set, so the address becomes
+  // attacker-controlled — defeating IP rate limiting and poisoning the logs.
+  // express-rate-limit rejects that setting outright (ERR_ERL_PERMISSIVE_TRUST_PROXY).
+  const trustProxy = process.env.TRUST_PROXY;
+  if (trustProxy && trustProxy !== 'false') {
+    const hops = Number.parseInt(trustProxy, 10);
+    if (Number.isInteger(hops) && hops >= 0) {
+      app.set('trust proxy', hops);
+    } else {
+      logger.warn(
+        `TRUST_PROXY must be a number of proxy hops (e.g. "1"), got "${trustProxy}". ` +
+          'Falling back to 1. See docs/MIGRATION.md.'
+      );
+      app.set('trust proxy', 1);
+    }
   }
 
   app.disable('x-powered-by');
@@ -173,6 +200,10 @@ async function main() {
   // pino-http middleware
   app.use(requestLogger.createHttpLogger());
 
+  // Liveness probe. Registered before any rate limiter and deliberately left
+  // unlimited: Docker's HEALTHCHECK polls it every 30s and the deploy script
+  // polls it every 2s during its health gate, so throttling it here would make
+  // Docker restart healthy containers and make good deploys roll themselves back.
   app.get('/health', (_req, res) => res.status(200).send('OK'));
 
   // routes

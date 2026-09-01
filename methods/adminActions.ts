@@ -35,12 +35,13 @@ class ChangePasswordSaveFailedError extends Error {
 
 const functions = {
   authenticateAdmin: function (
-    req: Express.AuthenticatedRequest<{ adminPassword: string }>,
+    req: Express.AuthenticatedRequest,
     res: Response
   ) {
+    const adminPassword = permissionHelper.getAdminPassword(req);
     if (
-      !req.params.adminPassword ||
-      !permissionHelper.isUserAdmin(req.token._id, req.params.adminPassword)
+      !adminPassword ||
+      !permissionHelper.isUserAdmin(req.token._id, adminPassword)
     ) {
       return res.status(403).send({
         message: 'Unauthorized action.',
@@ -50,13 +51,11 @@ const functions = {
       message: 'Authorized.',
     });
   },
-  getUsers: async function (
-    req: Express.AuthenticatedRequest<{ adminPassword: string }>,
-    res: Response
-  ) {
+  getUsers: async function (req: Express.AuthenticatedRequest, res: Response) {
+    const adminPassword = permissionHelper.getAdminPassword(req);
     if (
-      !req.params.adminPassword ||
-      !permissionHelper.isUserAdmin(req.token._id, req.params.adminPassword)
+      !adminPassword ||
+      !permissionHelper.isUserAdmin(req.token._id, adminPassword)
     ) {
       return res.status(403).send({
         message: 'Unauthorized action.',
@@ -95,9 +94,10 @@ const functions = {
     >,
     res: Response
   ) {
+    const adminPassword = permissionHelper.getAdminPassword(req);
     if (
-      !req.body.adminPassword ||
-      !permissionHelper.isUserAdmin(req.token._id, req.body.adminPassword)
+      !adminPassword ||
+      !permissionHelper.isUserAdmin(req.token._id, adminPassword)
     ) {
       return res.status(403).send({
         message: 'Unauthorized action.',
