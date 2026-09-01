@@ -5,6 +5,7 @@ import { ScheduledQuizUserStartModel } from '../models/logs/scheduledQuizUserSta
 import { SurveyAnswerModel } from '../models/logs/surveyAnswer';
 import logger from '../middleware/logger';
 import { Response } from 'express';
+import { UserRole } from '../types/roles';
 
 // Possible status codes
 enum GetLogsForScheduledQuizzesStatus {

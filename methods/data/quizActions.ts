@@ -4,6 +4,7 @@ import ModelHelper from '../../middleware/modelHelper';
 import mongoose from 'mongoose';
 import logger from '../../middleware/logger';
 import { Response } from 'express';
+import { UserRole, PermissionLevel } from '../../types/roles';
 
 enum CreateOrUpdateQuizStatus {
   Created = 200,
@@ -197,9 +198,9 @@ const functions = {
         return;
       }
       populatedQuizzes = populatedQuizzes as QuizDocument[];
-      return res
-        .status(GetQuizzesStatus.Retrieved)
-        .send({ quizzes: populatedQuizzes.map((q) => q.toJSON()) });
+      return res.status(GetQuizzesStatus.Retrieved).send({
+        quizzes: populatedQuizzes,
+      });
     } catch (err: unknown) {
       logger.error(err);
       return res

@@ -10,6 +10,7 @@ import {
   UserAchievementDocument,
   UserAchievementModel,
 } from '../../models/userAchievement';
+import { UserRole } from '../../types/roles';
 
 // Possible status codes
 enum CreateAchievementsStatus {

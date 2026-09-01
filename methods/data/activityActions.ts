@@ -5,6 +5,7 @@ import ModelHelper from '../../middleware/modelHelper';
 import mongoose from 'mongoose';
 import logger from '../../middleware/logger';
 import { Response } from 'express';
+import { UserRole, PermissionLevel } from '../../types/roles';
 
 async function archiveActivity(
   activity: ActivityDocument,
@@ -215,7 +216,7 @@ const functions = {
           });
         }
         return res.status(GetActivitiesStatus.Retrieved).send({
-          activities: populatedActivities.map((a) => a.toJSON()),
+          activities: populatedActivities,
         });
       }
     } catch (err: unknown) {

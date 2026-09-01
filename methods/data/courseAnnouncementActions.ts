@@ -6,6 +6,7 @@ import { PermissionModel, hasPermissions } from '../../models/permission';
 import mongoose from 'mongoose';
 import logger from '../../middleware/logger';
 import { Response } from 'express';
+import { UserRole, PermissionLevel } from '../../types/roles';
 
 // Possible status codes
 enum CreateOrUpdateCourseAnnouncementStatus {

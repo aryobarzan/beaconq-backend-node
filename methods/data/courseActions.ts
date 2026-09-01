@@ -8,6 +8,7 @@ import {
 } from '../../models/courseRegistration';
 import ModelHelper from '../../middleware/modelHelper';
 import firebaseHelper from '../../middleware/firebaseHelper';
+import { UserRole, PermissionLevel } from '../../types/roles';
 import mongoose from 'mongoose';
 
 // Possible status codes
@@ -245,8 +246,8 @@ const functions = {
       }
       return res.status(GetCoursesStatus.Retrieved).send({
         courses: Array.isArray(populatedCourses)
-          ? populatedCourses.map((c) => c.toJSON())
-          : populatedCourses.toJSON(),
+          ? populatedCourses
+          : [populatedCourses],
       });
     } catch (err: unknown) {
       logger.error(err);
@@ -515,7 +516,7 @@ const functions = {
       ) {
         return res.status(GetRegisteredCoursesStatus.Retrieved).send({
           message: 'Registered courses downloaded.',
-          courses: courses.map((c) => c.toJSON()),
+          courses: courses,
         });
       }
 
@@ -530,7 +531,7 @@ const functions = {
       populatedCourses = populatedCourses as CourseDocument[];
       return res.status(GetRegisteredCoursesStatus.Retrieved).send({
         message: 'Registered courses downloaded.',
-        courses: populatedCourses.map((c) => c.toJSON()),
+        courses: populatedCourses,
       });
     } catch (err: unknown) {
       logger.error(err);

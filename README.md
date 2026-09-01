@@ -112,14 +112,34 @@ Subsequently, the host machine does not know anything about these container name
 
 #### Approach #1: docker-compose
 
-Currently, the `docker-compose.yml` file has been set up in a way to enable mongo connections from the host machine using the host name "host.docker.internal":
+Currently, the `docker-compose.yml` file has been set up to enable mongo connections from both containers and the host machine:
 
 - For each mongo container (mongo1, mongo2, mongo3), we introduce the following key-value mapping under 'environment': `MONGODB_ADVERTISED_HOSTNAME: host.docker.internal`
 - For the primary node (mongo1), we update its `healthcheck` command to use this new hostname, as it crucially sets up our replica set! (previously, we were simply using the container names)
+- The `host.docker.internal` hostname allows containers (like the Node.js app) to connect to the MongoDB replica set
 
-With this setup, we can connect to our MongoDB replica set with the following connection string (using `mongosh` or MongoDB Compass): `mongodb://<user>:<password>@host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0&authSource=admin`
+**To connect from your host machine** (using `mongosh` or MongoDB Compass):
 
-- replace "user" and "password" with the admin credentials we have set up in our `.env` file. (`MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`)
+First, you need to add `host.docker.internal` to your hosts file so your machine can resolve it:
+
+- **macOS/Linux**: Add to `/etc/hosts` (requires sudo):
+  ```bash
+  echo "127.0.0.1 host.docker.internal" | sudo tee -a /etc/hosts
+  ```
+- **Windows**: Add to `C:\Windows\System32\drivers\etc\hosts` (requires admin):
+  ```
+  127.0.0.1 host.docker.internal
+  ```
+
+Then use this connection string:
+
+```
+mongodb://<user>:<password>@host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0&authSource=admin
+```
+
+**Note**: Even if you use `localhost` in the connection string, MongoDB's replica set will redirect you to the `host.docker.internal` hostnames internally, so the hosts file entry is required.
+
+- Replace `<user>` and `<password>` with the admin credentials we have set up in our `.env` file. (`MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`)
 
 #### Approach #2: manually adjust hosts
 

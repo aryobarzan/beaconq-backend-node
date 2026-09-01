@@ -1,2 +1,16 @@
 #!/bin/sh
+
+# Load shell environment to access npx
+export PATH="/usr/local/bin:$PATH"
+
+# If using nvm, load it
+if [ -f "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh"
+fi
+
+# If using fnm, load it
+if command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env --use-on-cd)"
+fi
+
 npx lint-staged
