@@ -18,7 +18,9 @@
           "type": "number"
         },
         "accessKey": {
-          "type": "string"
+          "type": "string",
+          "description": "Course registration key. Generated server-side on creation and never changeable afterwards. Any value sent by a client is ignored.",
+          "readOnly": true
         },
         "trialQuiz": {
           "type": "string"

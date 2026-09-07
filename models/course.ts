@@ -13,6 +13,11 @@ export interface Course {
   description: string;
   isManualTopicFocus: boolean;
   registrationLimit?: number;
+  /**
+   * Course registration key. Generated server-side on creation and never
+   * changeable afterwards. Any value sent by a client is ignored.
+   * @readOnly
+   */
   accessKey: string;
   trialQuiz?: Types.ObjectId;
   restrictSubmissionInitially: boolean;
@@ -60,9 +65,12 @@ const courseSchema = new Schema(
     },
     accessKey: {
       type: String,
-      //required: true,
       unique: true,
-      //default: crypto.randomBytes(4).toString("hex").toUpperCase(),
+      // Always generated server-side (see pre-save hook below). `immutable` makes
+      // Mongoose silently drop this path from every update (findByIdAndUpdate,
+      // updateOne, set() on an existing doc, ...), so a client can never change
+      // the key of an existing course.
+      immutable: true,
     },
     trialQuiz: {
       type: Schema.Types.ObjectId,
@@ -101,7 +109,10 @@ const courseSchema = new Schema(
 courseSchema.index({ 'sessions.scheduledQuizzes._id': 1 }, { unique: false });
 
 courseSchema.pre('save', function (this: CourseDocument) {
-  if (!this.accessKey) {
+  // The access key is owned by the server. On creation we always mint a fresh
+  // one, ignoring any value the client may have supplied. On later saves the
+  // field is `immutable`, so it can never be reassigned.
+  if (this.isNew) {
     this.accessKey = crypto.randomBytes(4).toString('hex').toUpperCase();
   }
 });

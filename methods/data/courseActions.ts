@@ -85,7 +85,12 @@ const functions = {
 
     let newCourse: CourseDocument;
     try {
-      newCourse = new CourseModel(JSON.parse(req.body.course));
+      const parsedCourse = JSON.parse(req.body.course);
+      // The access key is managed exclusively server-side; never trust a
+      // client-supplied value. New courses get a fresh key from the model's
+      // pre-save hook; existing courses keep their current key (see below).
+      delete parsedCourse.accessKey;
+      newCourse = new CourseModel(parsedCourse);
     } catch (_: unknown) {
       return res.status(CreateOrUpdateCourseStatus.InternalError).send({
         message:
@@ -150,6 +155,10 @@ const functions = {
           }
 
           newCourse.version = existingCourse.version + 1;
+          // Preserve the previously generated access key. `accessKey` is
+          // `immutable` in the schema so Mongoose would drop it from the update
+          // regardless, but set it explicitly so `newCourse` stays consistent.
+          newCourse.accessKey = existingCourse.accessKey;
           const updatedCourse = await CourseModel.findByIdAndUpdate(
             existingCourse._id,
             newCourse,
