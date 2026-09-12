@@ -83,6 +83,42 @@ The `docker-compose.yml` config expects two files on the host (root project fold
 
 ## Troubleshooting
 
+### Windows: "ports are not available" / bind: access forbidden by its access permissions
+
+On Windows, `docker-compose up` can suddenly fail with an error like this, even though nothing else is using the port:
+
+```
+Error response from daemon: ports are not available: exposing port TCP 0.0.0.0:3000 -> 127.0.0.1:0: listen tcp 0.0.0.0:3000: bind: An attempt was made to access a socket in a way forbidden by its access permissions.
+```
+
+This is **not** the usual "port already in use" error (which would say something different). It means Windows/Hyper-V (used by WSL2, which backs Docker Desktop) has reserved the port in a **dynamic TCP port exclusion range**, so the OS refuses to let anything bind to it — including Docker. This can happen spontaneously after a Windows update, a Docker Desktop update, a WSL restart, or a reboot, since Hyper-V's NAT service (`winnat`) periodically re-allocates these ranges and can happen to grab a block that includes a port you need (e.g. `3000`).
+
+**Diagnose it:**
+
+1. Check if the port is actually held by a process (the "normal" case):
+   ```powershell
+   netstat -ano | findstr ":3000"
+   ```
+   If nothing is listed, it's not a process holding the port — go to step 2.
+2. Check Windows' TCP port exclusion ranges:
+   ```powershell
+   netsh interface ipv4 show excludedportrange protocol=tcp
+   ```
+   If the port you need (e.g. `3000`) falls inside one of the listed `Start Port`–`End Port` ranges, that confirms it's being blocked by a reserved exclusion, not by another application.
+
+**Fix it:**
+
+1. Stop your containers first: `docker-compose down`
+2. Restart the Windows NAT service, from an **Administrator** PowerShell/terminal:
+   ```powershell
+   net stop winnat
+   net start winnat
+   ```
+3. Re-run `netsh interface ipv4 show excludedportrange protocol=tcp` to confirm the port is no longer in an excluded range.
+4. Bring the stack back up: `docker-compose up -d`
+
+Note: `wsl --shutdown` alone is often not enough — the exclusion range is typically only released once `winnat` itself is restarted (or the machine is rebooted). If restarting `winnat` doesn't help, a full reboot will also clear it.
+
 ### ipv6 issue
 
 Depending on your machine's configuration, the server can fail to connect to external domains, such as Google Firebase.  
