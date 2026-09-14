@@ -51,19 +51,10 @@ services:
   # For local development, `docker-compose.override.yml` re-publishes the ports and
   # re-advertises the members as host.docker.internal so tools on the host (mongosh,
   # MongoDB Compass) can connect. Compose merges it automatically; it is gitignored.
-  mongo1: # Primary node
+  mongo1:
+    # Primary node
     image: mongo:8.2.1
-    command:
-      [
-        '--replSet',
-        'rs0',
-        '--bind_ip_all',
-        '--port',
-        '27017',
-        '--keyFile',
-        '/keyfile/mongo-keyfile',
-        '--quiet',
-      ]
+    command: [ '--replSet', 'rs0', '--bind_ip_all', '--port', '27017', '--keyFile', '/keyfile/mongo-keyfile', '--quiet' ]
     depends_on:
       - keyfile-init
     environment:
@@ -73,14 +64,20 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
     healthcheck:
+      # Delegates to scripts/mongoHealthcheck.sh, which verifies that the replica set is
+      # initialised, that it advertises the container names, and that exactly one primary
+      # has been elected. Every failure path in that script exits non-zero, so a broken
+      # replica set is reported as unhealthy instead of being hidden behind a swallowed
+      # error. See the script header for the full rationale.
+      #
       # Reduced frequency to avoid frequent auth/connect chattiness in the server logs.
-      # The healthcheck still verifies replica set initialization and authentication,
-      # but runs less often to reduce ACCESS/NETWORK logging from repeated short-lived
-      # connections.
-      test: >
-        sh -c "echo \"try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo1:27017',priority:1},{_id:1,host:'mongo2:27018',priority:0.5},{_id:2,host:'mongo3:27019',priority:0.5}]}) }\" | mongosh --host mongo1 --port 27017 -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase admin"
+      test: [ 'CMD-SHELL', 'sh /healthcheck.sh' ]
       interval: 30s
       timeout: 10s
+      # The first probe initialises the replica set and exits 1 on purpose, and the
+      # container stays unhealthy until an election completes. The app and the backup
+      # service depend on this healthcheck, so they no longer start against a database
+      # that is not actually usable.
       start_period: 10s
       retries: 10
     restart: unless-stopped
@@ -89,6 +86,7 @@ services:
       - mongo1-config:/data/configdb
       - mongo-keyfile-volume:/keyfile
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+      - ./scripts/mongoHealthcheck.sh:/healthcheck.sh:ro
     networks:
       - backend
 
@@ -161,7 +159,6 @@ volumes:
   mongo3-config:
   mongo-keyfile-volume:
   backup-script-volume:
-
 
 networks:
   backend:

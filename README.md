@@ -18,6 +18,7 @@ As of 26 November 2025: ⭐ **fully migrated to TypeScript** ⭐
   - MongoDB replica set (3 nodes)
   - Automatic MongoDB initialization (keyfile, replica set initialization, user creation; see `docker-compose.yml` and `mongo-init.js.example`)
   - Automatic daily MongoDB backup (see `scripts/mongoDBDockerBackup.sh`)
+  - Replica set healthcheck verifying initialization, advertised member hostnames and primary election (see `scripts/mongoHealthcheck.sh`)
   - Automatic restart for services
   - Multi-stage build (see `Dockerfile`)
   - Separate communication network for services
@@ -137,6 +138,116 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 - Verify if your change was succesful: `cat /proc/sys/net/ipv6/conf/all/disable_ipv6`
   - Output should be "1"!
 
+### MongoDB: Server selection timed out after 30000 ms
+
+**Symptoms**
+
+The stack starts and `mongo1` reports `healthy`, but the Node.js app and the backup service keep failing to connect to MongoDB:
+
+```
+{"level":50,"msg":"Mongo connect attempt #1 failed: MongooseServerSelectionError: Server selection timed out after 30000 ms"}
+{"level":50,"msg":"Mongo connect attempt #2 failed: MongooseServerSelectionError: Server selection timed out after 30000 ms"}
+```
+
+**Cause**
+
+A MongoDB replica set persists its member list (the "replica set config") **inside the database files** — here, in the named volume `mongo1-data`.
+
+`rs.initiate()` only runs **once**, during the very first initialization of that volume. From then on, the volume keeps whatever hostnames were in effect at that moment, and `docker-compose down` (without `--volumes`) does not reset it.
+
+If the set was ever initialized with a hostname other than the container names — for example `host.docker.internal`, which is what a local `docker-compose.override.yml` uses — the config stays pinned to that hostname:
+
+```json
+["host.docker.internal:27017", "host.docker.internal:27018", "host.docker.internal:27019"]
+```
+
+The app can still reach the seed `mongo1:27017`, but the driver is then told that the **primary** lives at `host.docker.internal:27017`. When the mongo ports are not published on the host (i.e. no `docker-compose.override.yml` is present), nothing is listening there, so the driver never completes server selection and times out after 30 seconds.
+
+This most often appears when moving the project between machines (e.g. Windows → macOS): `docker-compose.override.yml` is **gitignored**, so the working local setup does not travel with the repository, while the initialized volume still advertises the old hostnames.
+
+> The `mongo1` healthcheck (`scripts/mongoHealthcheck.sh`) detects this condition. It initialises the replica set on the first run, and then fails as long as the advertised hostnames do not match the container names, or no primary has been elected. `mongo1` is therefore reported as `unhealthy`, and because the app and the backup service use `depends_on: service_healthy`, they no longer start against an unusable database.
+>
+> The container remains `unhealthy` until an election completes. On a first initialisation this delays `docker-compose up` by roughly 30–60 seconds — that is expected, not a hang, and it does **not** require running `docker-compose up` a second time. Docker keeps re-running the probe (every `interval`, up to `retries` times) until it succeeds, and only starts the app and the backup service once it does.
+>
+> The healthcheck only *detects* a stale config, it cannot repair one: a set advertised under the wrong hostnames stays `unhealthy` and `docker-compose up` fails once the retries are exhausted. Apply the `rs.reconfig` fix below in that case.
+
+**Diagnose**
+
+The quickest signal is the health output of the container:
+
+```bash
+docker inspect --format '{{range .State.Health.Log}}exit={{.ExitCode}} out={{.Output}}{{end}}' "$(docker-compose ps -q mongo1)"
+```
+
+A replica set advertising the wrong hostnames reports lines such as:
+
+```
+exit=1 out=unhealthy: replica set advertises [host.docker.internal:27017, ...] but expected [mongo1:27017, ...]
+```
+
+To confirm the advertised hostnames directly, with the stack running:
+
+```bash
+docker-compose exec -T mongo1 mongosh --quiet \
+  -u <username> -p <password> --authenticationDatabase admin \
+  --eval 'db.adminCommand({replSetGetConfig:1}).config.members.map(m => m.host)'
+```
+
+Replace `<username>` / `<password>` with the values of `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` from your `.env`.
+
+Expected output:
+
+```
+[ 'mongo1:27017', 'mongo2:27018', 'mongo3:27019' ]
+```
+
+Anything else (for instance `host.docker.internal:...`) means the volume holds a stale config.
+
+**Fix (keeps your data)**
+
+Re-point the replica set at the container names in place, then restart the services:
+
+```bash
+docker-compose stop app mongo-backup
+
+docker-compose exec -T mongo1 mongosh --quiet \
+  -u <username> -p <password> --authenticationDatabase admin \
+  --eval 'const cfg = db.adminCommand({replSetGetConfig:1}).config;
+          cfg.version++;
+          cfg.members[0].host = "mongo1:27017";
+          cfg.members[1].host = "mongo2:27018";
+          cfg.members[2].host = "mongo3:27019";
+          printjson(db.adminCommand({replSetReconfig: cfg, force: true}));'
+
+docker-compose up -d
+```
+
+Then confirm that all three members are healthy and that exactly one has been elected primary (the election can take a few seconds):
+
+```bash
+docker-compose exec -T mongo1 mongosh --quiet \
+  -u <username> -p <password> --authenticationDatabase admin \
+  --eval 'const s = db.adminCommand({replSetGetStatus:1});
+          print(JSON.stringify(s.members.map(m => ({name: m.name, state: m.stateStr, health: m.health})), null, 2))'
+```
+
+**Alternative fix (erases the database)**
+
+If you do not need to keep the data, delete the volumes so the replica set is initialized from scratch with the correct container names:
+
+```bash
+docker-compose down --volumes
+docker-compose up -d
+```
+
+**How to avoid it**
+
+- Keep the replica set advertised as `mongo1` / `mongo2` / `mongo3`. The app reaches MongoDB through Docker's internal DNS; nothing else is needed for normal operation.
+- Never initialize a replica set with `host.docker.internal`. A local `docker-compose.override.yml` exists to let **host tools** reach the ports of a set that is already advertised under container names — it is not a substitute for publishing ports.
+- If you need to connect from the host, prefer the hosts-file approach (Approach #2 below) over re-advertising the members.
+- Remember that `docker-compose down` (without `--volumes`) preserves `mongo1-data`, and therefore preserves a stale config. `docker-compose down --volumes` is the only command that resets it.
+- When moving a database between machines, prefer restoring a dump with `mongorestore` (the format produced by `scripts/mongoDBDockerBackup.sh`) instead of copying raw database volumes, so the destination uses its own replica set config.
+
 ---
 
 ### Connecting to mongo containers from host machine
@@ -146,13 +257,15 @@ This is facilitated by Docker's own DNS service, which maps each container name 
 
 Subsequently, the host machine does not know anything about these container names, as it cannot resolve the associated IP addresses for them.
 
-#### Approach #1: docker-compose
+#### Approach #1: docker-compose (local override file)
 
-Currently, the `docker-compose.yml` file has been set up to enable mongo connections from both containers and the host machine:
+The committed `docker-compose.yml` deliberately does **not** publish the MongoDB ports, and the replica set advertises its members under the internal container names (`mongo1:27017`, `mongo2:27018`, `mongo3:27019`). That is all the app and the backup service need, since they run on the same Docker network.
 
-- For each mongo container (mongo1, mongo2, mongo3), we introduce the following key-value mapping under 'environment': `MONGODB_ADVERTISED_HOSTNAME: host.docker.internal`
-- For the primary node (mongo1), we update its `healthcheck` command to use this new hostname, as it crucially sets up our replica set! (previously, we were simply using the container names)
-- The `host.docker.internal` hostname allows containers (like the Node.js app) to connect to the MongoDB replica set
+For local development you can add a **local, gitignored** `docker-compose.override.yml` that re-publishes the mongo ports (27017–27019) and re-advertises the members as `host.docker.internal`, so tools on the host can reach the replica set. Docker Compose merges it automatically on top of `docker-compose.yml`.
+
+As `.gitignore` states, this file is local-only: *"The server runs docker-compose.yml alone - this file must never be copied there."*
+
+> ⚠️ **Warning**: this override changes the hostnames the replica set is initialized with. If a volume is initialized while the override is active, `mongo1-data` will permanently advertise `host.docker.internal`, which breaks the app as soon as the override is absent. See [MongoDB: Server selection timed out after 30000 ms](#mongodb-server-selection-timed-out-after-30000-ms). Only use the override against a set that was already initialized under the container names.
 
 **To connect from your host machine** (using `mongosh` or MongoDB Compass):
 
@@ -195,6 +308,7 @@ The manual approach would be to add the IP mappings to our host's DNS resolution
 
 - Finally, to connect to our replica set, use the following connection string (using `mongosh` or MongoDB Compass): `mongodb://<user>:<password>@mongo1:27017,mongo2:27018,mongo3:27019/?replicaSet=rs0&authSource=admin`
   - replace "user" and "password" with the admin credentials we have set up in our `.env` file. (`MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`)
+- Note: this approach still requires the mongo ports to be published on the host. The committed `docker-compose.yml` does **not** publish them, so you also need the local `docker-compose.override.yml` described in Approach #1 (the hosts file only makes the *names* resolvable, it does not open the ports).
 
 The solution is to manually override your host machine's DNS resolution by editing its local hosts file. This file acts as a local, static DNS record keeper.
 You are telling your host machine: "When anything tries to look up the name mongo1, use this specific IP address."
