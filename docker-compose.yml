@@ -84,7 +84,13 @@ services:
         '--quiet',
       ]
     depends_on:
-      - keyfile-init
+      # service_completed_successfully, not the short form: the short form waits
+      # only for the init container to START. mongod would then race it and can
+      # read the keyfile before it has been chown'd and chmod 400'd, refusing to
+      # start with "permissions on /keyfile/mongo-keyfile are too open" - and
+      # restart: unless-stopped turns that into a loop.
+      keyfile-init:
+        condition: service_completed_successfully
     environment:
       # A user with these credentials will automatically be created in the 'admin' database.
       # As such, attempting to manually create that user as part of the mongo-init.js script would lead to an error and start-up issues for mongo.
