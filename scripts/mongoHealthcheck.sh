@@ -5,8 +5,14 @@
 # usable, which requires all of the following:
 #
 #   1. the set is initialised (this script initialises it on the first run),
-#   2. its members are advertised under the internal container names,
+#   2. its members are advertised under the expected hostnames,
 #   3. exactly one primary has been elected.
+#
+# The expected member list comes from MONGO_RS_HOST (comma-separated), so this
+# one script serves both topologies: the production default of a single node
+# addressed by container name, and the local override that advertises
+# host.docker.internal so host tools can reach the same set. Previously the
+# override duplicated this logic inline and drifted out of sync with it.
 #
 # This replaces an inline `mongosh --eval` healthcheck that wrapped
 # `rs.status()` / `rs.initiate()` in a JS try/catch. Because that error was
@@ -27,16 +33,14 @@
 # set -u: throw error (and abort script) on unset variables
 set -eu
 
-# Invoked as `sh /healthcheck.sh`, so no executable bit is required and the
-# script does not depend on a shebang inside the container.
-exec mongosh --quiet \
-  --host mongo1 --port 27017 \
-  --username "$MONGO_INITDB_ROOT_USERNAME" \
-  --password "$MONGO_INITDB_ROOT_PASSWORD" \
-  --authenticationDatabase admin \
-  --eval '
-// Must match the replica set configuration in docker-compose.yml.
-const expected = ["mongo1:27017", "mongo2:27018", "mongo3:27019"];
+# Production default: a single member, addressed by container name. The local
+# override sets this to host.docker.internal:27017.
+: "${MONGO_RS_HOST:=mongo1:27017}"
+
+# Only the first line interpolates; the heredoc delimiter is quoted, so nothing
+# inside the JS is touched by the shell.
+JS="const expected = '${MONGO_RS_HOST}'.split(',');
+$(cat <<'EOJS'
 
 // 1. Initialise the replica set on the very first run. It cannot be healthy
 //    yet: an election has to take place first.
@@ -46,19 +50,16 @@ try {
 } catch (err) {
   rs.initiate({
     _id: "rs0",
-    members: [
-      { _id: 0, host: expected[0], priority: 1 },
-      { _id: 1, host: expected[1], priority: 0.5 },
-      { _id: 2, host: expected[2], priority: 0.5 },
-    ],
+    members: expected.map((host, index) => ({ _id: index, host: host })),
   });
   print("unhealthy: replica set initialised, waiting for election");
   quit(1);
 }
 
-// 2. The advertised hostnames must be the container names. A set that was
+// 2. The advertised hostnames must be the expected ones. A set that was
 //    initialised with any other hostname keeps that config permanently, which
-//    leaves the app unable to reach the primary.
+//    leaves the app unable to reach the primary. This is also what catches a
+//    stale volume from an earlier, differently-shaped replica set.
 const advertised = db
   .adminCommand({ replSetGetConfig: 1 })
   .config.members.map((member) => member.host);
@@ -68,7 +69,8 @@ const advertisementsMatch =
 if (!advertisementsMatch) {
   print(
     "unhealthy: replica set advertises [" + advertised.join(", ") +
-      "] but expected [" + expected.join(", ") + "]"
+      "] but expected [" + expected.join(", ") + "]. " +
+      "A volume initialised with a different topology must be recreated."
   );
   quit(1);
 }
@@ -82,4 +84,14 @@ if (primary.length !== 1) {
 
 print("healthy: primary " + primary[0].name);
 quit(0);
-'
+EOJS
+)"
+
+# Invoked as `sh /healthcheck.sh`, so no executable bit is required and the
+# script does not depend on a shebang inside the container.
+exec mongosh --quiet \
+  --host mongo1 --port 27017 \
+  --username "$MONGO_INITDB_ROOT_USERNAME" \
+  --password "$MONGO_INITDB_ROOT_PASSWORD" \
+  --authenticationDatabase admin \
+  --eval "$JS"
